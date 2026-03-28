@@ -9,9 +9,13 @@ export default async function TestSupabasePage() {
   // Test: try a simple query to verify DB connectivity
   const { error: dbError } = await supabase.from("profiles").select("id").limit(1);
 
-  const authConnected = !authError;
-  // Table may not exist yet — a "relation does not exist" error still proves the DB connection works
-  const dbConnected = !dbError || dbError.message.includes("does not exist");
+  // "Auth session missing" means the Auth API responded — connection works, just no user logged in
+  const authConnected = !authError || authError.message.includes("Auth session missing");
+  // Table may not exist yet — these errors still prove the DB connection works
+  const dbConnected =
+    !dbError ||
+    dbError.message.includes("does not exist") ||
+    dbError.message.includes("Could not find");
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
