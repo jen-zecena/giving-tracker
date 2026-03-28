@@ -32,14 +32,28 @@ export function Sidebar({ onSignOut }: { onSignOut: () => void }) {
         collapsed ? "w-16" : "w-56"
       )}
     >
-      {/* Logo */}
-      <div className="flex h-14 items-center gap-2 px-4">
-        <Heart className="h-5 w-5 shrink-0 text-sidebar-primary" />
-        {!collapsed && (
-          <span className="text-sm font-semibold tracking-tight">
-            Giving Tracker
-          </span>
-        )}
+      {/* Logo + collapse toggle */}
+      <div className="flex h-14 items-center justify-between px-4">
+        <div className="flex items-center gap-2">
+          <Heart className="h-5 w-5 shrink-0 text-sidebar-primary" />
+          {!collapsed && (
+            <span className="text-sm font-semibold tracking-tight">
+              Giving Tracker
+            </span>
+          )}
+        </div>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          className="text-sidebar-foreground/50 hover:text-sidebar-foreground"
+          onClick={() => setCollapsed(!collapsed)}
+        >
+          {collapsed ? (
+            <ChevronRight className="h-3.5 w-3.5" />
+          ) : (
+            <ChevronLeft className="h-3.5 w-3.5" />
+          )}
+        </Button>
       </div>
 
       <Separator className="bg-sidebar-border" />
@@ -70,7 +84,7 @@ export function Sidebar({ onSignOut }: { onSignOut: () => void }) {
       </nav>
 
       {/* Bottom section */}
-      <div className="px-2 pb-3 space-y-1">
+      <div className="px-2 pb-3">
         <Separator className="mb-2 bg-sidebar-border" />
         <button
           onClick={onSignOut}
@@ -83,18 +97,6 @@ export function Sidebar({ onSignOut }: { onSignOut: () => void }) {
           <LogOut className="h-4 w-4 shrink-0" />
           {!collapsed && <span>Sign out</span>}
         </button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="w-full h-8 text-sidebar-foreground/50 hover:text-sidebar-foreground"
-          onClick={() => setCollapsed(!collapsed)}
-        >
-          {collapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
-        </Button>
       </div>
     </aside>
   );
