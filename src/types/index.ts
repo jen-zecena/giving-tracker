@@ -10,12 +10,12 @@ export type CauseTag =
   | "education"
   | "health"
   | "environment"
-  | "disaster_relief"
-  | "hunger"
-  | "housing"
-  | "arts"
+  | "poverty"
   | "animal_welfare"
+  | "arts_culture"
+  | "disaster_relief"
   | "human_rights"
+  | "community"
   | "religious";
 
 export type RecurringFrequency = "weekly" | "monthly" | "quarterly" | "annually";
@@ -36,7 +36,6 @@ export interface Profile {
   privacy_tier: PrivacyTier;
   salary_updated_at: string | null;
   onboarding_completed: boolean;
-  email_notifications_enabled: boolean;
   created_at: string;
   updated_at: string;
 }
