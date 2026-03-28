@@ -57,7 +57,7 @@ CREATE TABLE donations (
   user_id               uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   organization_name     text NOT NULL,
   amount                numeric(12,2) NOT NULL CHECK (amount > 0),
-  currency              text NOT NULL DEFAULT 'USD',
+  currency              text NOT NULL DEFAULT 'USD' CHECK (currency = 'USD'),
   donation_date         date NOT NULL DEFAULT CURRENT_DATE,
   scope                 donation_scope NOT NULL,
   cause_tag             cause_tag,
@@ -89,7 +89,7 @@ CREATE TABLE recurring_schedules (
   user_id                   uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   organization_name         text NOT NULL,
   amount                    numeric(12,2) NOT NULL CHECK (amount > 0),
-  currency                  text NOT NULL DEFAULT 'USD',
+  currency                  text NOT NULL DEFAULT 'USD' CHECK (currency = 'USD'),
   frequency                 recurring_frequency NOT NULL,
   cause_tag                 cause_tag,
   custom_tag                text,
@@ -164,6 +164,7 @@ CREATE TRIGGER on_auth_user_created
 CREATE OR REPLACE FUNCTION public.update_updated_at()
 RETURNS trigger
 LANGUAGE plpgsql
+SET search_path = ''
 AS $$
 BEGIN
   NEW.updated_at = now();
