@@ -91,6 +91,7 @@ export function Sidebar({ onSignOut }: { onSignOut: () => void }) {
           className={cn(
             "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
             "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
             "text-sidebar-foreground/70"
           )}
         >
