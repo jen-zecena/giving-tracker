@@ -33,6 +33,17 @@ src/
   types/         # Shared TypeScript type definitions (DB schema types, form types, dashboard aggregation types)
 ```
 
+## GitHub Issue Workflow
+
+When asked to work on a GitHub issue, follow this process:
+
+1. **Start:** Move the issue to "In Progress" on the project board. Create a new branch named `task-XXX/<short-description>` off `main`.
+2. **Build:** Work through each item in the issue's **Tasks** section. As each task is completed, update the issue to check off that item (`- [x]`).
+3. **Validate:** Once all tasks are done, verify every item in the **Acceptance Criteria** section. Check off each criterion on the issue as it passes (`- [x]`).
+4. **Ship:** Commit the changes (reference the issue with `Closes #N`), push the branch, and create a PR for review. Move the issue to "In Review" on the project board.
+
+GitHub project: "Giving Tracker" (project number 2, owner jen-zecena). Use `gh` CLI for all issue/project operations.
+
 ## Key Architecture Decisions
 
 - **Privacy model:** 3-tier presets (Private, Friends Only, Open Giver) enforced at database level via Supabase RLS — not just UI
