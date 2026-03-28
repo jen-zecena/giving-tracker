@@ -51,3 +51,52 @@ GitHub project: "Giving Tracker" (project number 2, owner jen-zecena). Use `gh` 
 - **Recurring donations:** Default to pending + user confirmation. Auto-confirm offered after 3 consecutive confirmations
 - **Currency:** Phase 1 is USD-only
 - **Path aliases:** Use `@/` imports (maps to `src/`)
+
+
+## Frontend Code Rules
+
+### Always Do First
+- Run the `react-best-practices` and `shadcn` skills before writing frontend component code.
+- Read `src/app/globals.css` to confirm current theme tokens before using any color/spacing values.
+
+### Reference Images
+- If a reference image is provided: match layout, spacing, typography, and color exactly. Swap in placeholder content (images via `https://placehold.co/`, generic copy). Do not improve or add to the design.
+- If no reference image: design from scratch using shadcn/ui components and the guardrails below.
+- Screenshot your output with `agent-browser`, compare against reference, fix mismatches, re-screenshot. Do at least 2 comparison rounds.
+
+### Dev Server & Screenshots
+- Dev server: `npm run dev` (serves at `http://localhost:3000`). Start in background before any screenshots.
+- Use the `agent-browser` skill to screenshot and visually verify pages on localhost. Never screenshot a `file:///` URL.
+- When comparing, be specific: "heading is 32px but reference shows ~24px", "card gap is 16px but should be 24px".
+- Check: spacing/padding, font size/weight/line-height, colors, alignment, border-radius, shadows, image sizing.
+
+### Component & Styling Defaults
+- Build with React Server Components by default. Only add `'use client'` when interactivity or browser APIs are needed.
+- Use shadcn/ui components (`@/components/ui/*`) — do not build raw HTML equivalents when a primitive exists.
+- Style with Tailwind v4 utility classes. Use shadcn/ui CSS variable tokens (`bg-primary`, `text-muted-foreground`, `border-border`, etc.) — not raw Tailwind palette colors.
+- Responsive and mobile-first.
+
+### Typography
+- **Body/UI text:** Inter (`font-sans`).
+- **Code, metrics, IDs, timestamps:** Geist Mono (`font-mono`).
+- Apply tight tracking (`tracking-tight`) on large headings, generous line-height on body text.
+- Do not introduce additional font families without explicit approval.
+
+### Design Guardrails
+- **Colors:** Use the shadcn/ui theme tokens defined in `globals.css` (`--primary`, `--accent`, `--muted`, `--chart-1` through `--chart-5`, etc.). Never hardcode hex/oklch values or use default Tailwind palette colors (indigo-500, blue-600, etc.) directly.
+- **Dark mode:** Dashboard and data-heavy pages should default to dark mode. The `.dark` class on `<html>` activates the dark theme tokens already defined in `globals.css`.
+- **Shadows:** Use shadcn/ui's shadow tokens or layered, low-opacity shadows. Avoid flat `shadow-md` with no thought.
+- **Animations:** Only animate `transform` and `opacity`. Never use `transition-all`. Use subtle easing.
+- **Interactive states:** Every clickable element needs hover, focus-visible, and active states. Use shadcn/ui's built-in states where available.
+- **Spacing:** Use consistent Tailwind spacing tokens — not random increments. Maintain a visual rhythm.
+- **Depth:** Surfaces should have a clear layering system (background → card → popover/floating). Use the `card`, `popover`, and `background` theme tokens to establish this.
+- **Empty/loading/error states:** Every data-driven component must handle all three. Never leave a blank screen on loading or an unhandled error.
+
+### Hard Rules
+- Do not add sections, features, or content not in the reference.
+- Do not "improve" a reference design — match it.
+- Do not stop after one screenshot pass.
+- Do not use `transition-all`.
+- Do not use default Tailwind blue/indigo as primary color — use the theme tokens.
+- Do not build custom components when a shadcn/ui primitive covers the use case.
+
