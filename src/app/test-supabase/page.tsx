@@ -3,8 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 export default async function TestSupabasePage() {
   const supabase = await createClient();
 
-  // Test: try to get the current session (will be null if not logged in, but proves the connection works)
-  const { error: authError } = await supabase.auth.getSession();
+  // Test: validate auth token server-side (will be null if not logged in, but proves the connection works)
+  const { error: authError } = await supabase.auth.getUser();
 
   // Test: try a simple query to verify DB connectivity
   const { error: dbError } = await supabase.from("profiles").select("id").limit(1);

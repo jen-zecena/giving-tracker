@@ -1,7 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const publicRoutes = ["/", "/login", "/register", "/auth/callback", "/test-supabase"];
+const publicRoutes = [
+  "/",              // TODO: remove once "/" becomes the authenticated dashboard (see #44)
+  "/login",
+  "/register",
+  "/auth/callback",
+  "/test-supabase", // diagnostic page — remove before launch (see #43)
+];
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -63,3 +69,4 @@ export const config = {
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
+
