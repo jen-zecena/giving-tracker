@@ -6,6 +6,7 @@ const publicRoutes = [
   "/login",
   "/register",
   "/auth/callback",
+  "/onboarding",
   "/test-supabase", // diagnostic page — remove before launch (see #43)
 ];
 
