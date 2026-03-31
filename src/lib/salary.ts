@@ -4,7 +4,10 @@ const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12; // GCM standard
 const TAG_LENGTH = 16; // auth tag
 
+let _keyCache: Buffer | null = null;
+
 function getKey(): Buffer {
+  if (_keyCache) return _keyCache;
   const key = process.env.SALARY_ENCRYPTION_KEY;
   if (!key) {
     throw new Error(
@@ -15,6 +18,7 @@ function getKey(): Buffer {
   if (buf.length !== 32) {
     throw new Error("SALARY_ENCRYPTION_KEY must be 64 hex characters (32 bytes)");
   }
+  _keyCache = buf;
   return buf;
 }
 

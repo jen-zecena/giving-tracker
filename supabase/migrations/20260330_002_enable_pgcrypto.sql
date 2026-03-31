@@ -5,9 +5,10 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
 
 -- =============================================================
--- DB-level encrypt/decrypt functions (optional, for SQL-level use)
--- The app primarily uses Node.js AES-256-GCM encryption in src/lib/salary.ts
--- These functions are available if direct SQL encryption is ever needed
+-- DB-level encrypt/decrypt functions (optional, for SQL-only use cases)
+-- WARNING: These use pgp_sym_encrypt (OpenPGP format) which is NOT compatible
+-- with the app-level AES-256-GCM encryption in src/lib/salary.ts.
+-- Do NOT use these to read/write data encrypted by the app-level functions.
 -- =============================================================
 
 CREATE OR REPLACE FUNCTION public.encrypt_salary(salary numeric, key text)
