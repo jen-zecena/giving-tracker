@@ -44,14 +44,22 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isPublicRoute = publicRoutes.some((route) =>
-    pathname.startsWith(route)
+  const isPublicRoute = publicRoutes.some(
+    (route) => pathname === route || pathname.startsWith(route + "/")
   );
 
   // Redirect unauthenticated users to /login for protected routes
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+
+  // Redirect authenticated users away from login/register pages
+  const authOnlyRoutes = ["/login", "/register"];
+  if (user && authOnlyRoutes.some((route) => pathname === route)) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dashboard";
     return NextResponse.redirect(url);
   }
 
