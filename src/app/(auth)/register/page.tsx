@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,14 +18,14 @@ import { signUp, type AuthResult } from "@/lib/actions/auth";
 
 export default function RegisterPage() {
   const [result, setResult] = useState<AuthResult | null>(null);
-  const [pending, setPending] = useState(false);
+  const [pending, startTransition] = useTransition();
 
-  async function handleSubmit(formData: FormData) {
-    setPending(true);
-    setResult(null);
-    const res = await signUp(formData);
-    setResult(res);
-    setPending(false);
+  function handleSubmit(formData: FormData) {
+    startTransition(async () => {
+      setResult(null);
+      const res = await signUp(formData);
+      setResult(res);
+    });
   }
 
   return (
@@ -90,7 +90,7 @@ export default function RegisterPage() {
       <CardFooter className="justify-center">
         <p className="text-sm text-muted-foreground">
           Already have an account?{" "}
-          <Link href="/login" className="text-primary hover:underline">
+          <Link href="/login" className="text-primary hover:underline focus-visible:underline focus-visible:outline-none">
             Sign in
           </Link>
         </p>

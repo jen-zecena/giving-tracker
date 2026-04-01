@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,24 +18,24 @@ import { signIn, forgotPassword, type AuthResult } from "@/lib/actions/auth";
 
 export default function LoginPage() {
   const [result, setResult] = useState<AuthResult | null>(null);
-  const [pending, setPending] = useState(false);
+  const [pending, startTransition] = useTransition();
   const [showForgot, setShowForgot] = useState(false);
 
-  async function handleSignIn(formData: FormData) {
-    setPending(true);
-    setResult(null);
-    const res = await signIn(formData);
-    // signIn redirects on success, so we only reach here on error
-    setResult(res);
-    setPending(false);
+  function handleSignIn(formData: FormData) {
+    startTransition(async () => {
+      setResult(null);
+      const res = await signIn(formData);
+      // signIn redirects on success, so we only reach here on error
+      setResult(res);
+    });
   }
 
-  async function handleForgotPassword(formData: FormData) {
-    setPending(true);
-    setResult(null);
-    const res = await forgotPassword(formData);
-    setResult(res);
-    setPending(false);
+  function handleForgotPassword(formData: FormData) {
+    startTransition(async () => {
+      setResult(null);
+      const res = await forgotPassword(formData);
+      setResult(res);
+    });
   }
 
   if (showForgot) {
@@ -82,7 +82,7 @@ export default function LoginPage() {
               setShowForgot(false);
               setResult(null);
             }}
-            className="text-sm text-primary hover:underline"
+            className="text-sm text-primary hover:underline focus-visible:underline focus-visible:outline-none"
           >
             Back to sign in
           </button>
@@ -122,7 +122,7 @@ export default function LoginPage() {
                   setShowForgot(true);
                   setResult(null);
                 }}
-                className="text-xs text-muted-foreground hover:text-primary hover:underline"
+                className="text-xs text-muted-foreground hover:text-primary hover:underline focus-visible:text-primary focus-visible:underline focus-visible:outline-none"
               >
                 Forgot password?
               </button>
@@ -148,7 +148,7 @@ export default function LoginPage() {
       <CardFooter className="justify-center">
         <p className="text-sm text-muted-foreground">
           Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-primary hover:underline">
+          <Link href="/register" className="text-primary hover:underline focus-visible:underline focus-visible:outline-none">
             Create one
           </Link>
         </p>
