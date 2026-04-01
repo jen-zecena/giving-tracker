@@ -1,10 +1,158 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { Heart } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
+import { signIn, forgotPassword, type AuthResult } from "@/lib/actions/auth";
+
 export default function LoginPage() {
+  const [result, setResult] = useState<AuthResult | null>(null);
+  const [pending, setPending] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
+
+  async function handleSignIn(formData: FormData) {
+    setPending(true);
+    setResult(null);
+    const res = await signIn(formData);
+    // signIn redirects on success, so we only reach here on error
+    setResult(res);
+    setPending(false);
+  }
+
+  async function handleForgotPassword(formData: FormData) {
+    setPending(true);
+    setResult(null);
+    const res = await forgotPassword(formData);
+    setResult(res);
+    setPending(false);
+  }
+
+  if (showForgot) {
+    return (
+      <Card className="w-full max-w-sm">
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+            <Heart className="h-5 w-5 text-primary" />
+          </div>
+          <CardTitle className="text-xl">Reset password</CardTitle>
+          <CardDescription>
+            Enter your email and we&apos;ll send a reset link
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form action={handleForgotPassword} className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="you@example.com"
+                autoComplete="email"
+                required
+              />
+            </div>
+
+            {result?.error && (
+              <p className="text-sm text-destructive">{result.error}</p>
+            )}
+            {result?.success && (
+              <p className="text-sm text-accent">{result.success}</p>
+            )}
+
+            <Button type="submit" className="w-full" disabled={pending}>
+              {pending ? "Sending..." : "Send reset link"}
+            </Button>
+          </form>
+        </CardContent>
+        <CardFooter className="justify-center">
+          <button
+            onClick={() => {
+              setShowForgot(false);
+              setResult(null);
+            }}
+            className="text-sm text-primary hover:underline"
+          >
+            Back to sign in
+          </button>
+        </CardFooter>
+      </Card>
+    );
+  }
+
   return (
-    <div className="w-full max-w-sm space-y-4 text-center">
-      <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
-      <p className="text-muted-foreground">
-        Login form will appear here.
-      </p>
-    </div>
+    <Card className="w-full max-w-sm">
+      <CardHeader className="text-center">
+        <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+          <Heart className="h-5 w-5 text-primary" />
+        </div>
+        <CardTitle className="text-xl">Welcome back</CardTitle>
+        <CardDescription>Sign in to your account</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form action={handleSignIn} className="grid gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              placeholder="you@example.com"
+              autoComplete="email"
+              required
+            />
+          </div>
+          <div className="grid gap-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Password</Label>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowForgot(true);
+                  setResult(null);
+                }}
+                className="text-xs text-muted-foreground hover:text-primary hover:underline"
+              >
+                Forgot password?
+              </button>
+            </div>
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+            />
+          </div>
+
+          {result?.error && (
+            <p className="text-sm text-destructive">{result.error}</p>
+          )}
+
+          <Button type="submit" className="w-full" disabled={pending}>
+            {pending ? "Signing in..." : "Sign in"}
+          </Button>
+        </form>
+      </CardContent>
+      <CardFooter className="justify-center">
+        <p className="text-sm text-muted-foreground">
+          Don&apos;t have an account?{" "}
+          <Link href="/register" className="text-primary hover:underline">
+            Create one
+          </Link>
+        </p>
+      </CardFooter>
+    </Card>
   );
 }
