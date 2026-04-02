@@ -363,7 +363,7 @@ export default function NewDonationPage() {
                 htmlFor="privateOverride"
                 className="cursor-pointer text-sm"
               >
-                Hide this donation
+                Keep this donation private
               </Label>
             </div>
 
