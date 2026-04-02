@@ -2,10 +2,12 @@
 
 import { createClient } from "@/lib/supabase/server";
 import type {
+  Donation,
   DonationFormData,
   DonationScope,
   DonationStatus,
   CauseTag,
+  RecurringFrequency,
 } from "@/types";
 
 // ── Types ──────────────────────────────────────────────────
@@ -34,6 +36,25 @@ export type PaginatedResult<T> = {
 };
 
 // ── Helpers ────────────────────────────────────────────────
+
+function getNextDueDate(date: string, frequency: RecurringFrequency): string {
+  const d = new Date(date + "T00:00:00");
+  switch (frequency) {
+    case "weekly":
+      d.setDate(d.getDate() + 7);
+      break;
+    case "monthly":
+      d.setMonth(d.getMonth() + 1);
+      break;
+    case "quarterly":
+      d.setMonth(d.getMonth() + 3);
+      break;
+    case "annually":
+      d.setFullYear(d.getFullYear() + 1);
+      break;
+  }
+  return d.toISOString().split("T")[0];
+}
 
 async function getAuthenticatedUser() {
   const supabase = await createClient();
@@ -110,18 +131,23 @@ export async function createDonation(
         cause_tag: data.cause_tag || null,
         custom_tag: data.custom_tag?.trim() || null,
         scope: data.scope,
-        next_due_date: data.donation_date,
+        next_due_date: getNextDueDate(data.donation_date, data.frequency),
       })
       .select("id")
       .single();
 
-    if (!scheduleError && schedule) {
-      // Link the donation to the recurring schedule
-      await supabase
-        .from("donations")
-        .update({ recurring_schedule_id: schedule.id })
-        .eq("id", donation.id);
+    if (scheduleError || !schedule) {
+      return {
+        data: { id: donation.id },
+        error: "Donation saved, but recurring schedule could not be created. Please set it up manually.",
+      };
     }
+
+    // Link the donation to the recurring schedule
+    await supabase
+      .from("donations")
+      .update({ recurring_schedule_id: schedule.id })
+      .eq("id", donation.id);
   }
 
   return { data: { id: donation.id } };
@@ -131,7 +157,7 @@ export async function createDonation(
 
 export async function getDonations(
   filters: DonationListFilters = {}
-): Promise<ActionResult<PaginatedResult<Record<string, unknown>>>> {
+): Promise<ActionResult<PaginatedResult<Donation>>> {
   const { supabase, user } = await getAuthenticatedUser();
   if (!supabase || !user) {
     return { error: "You must be signed in to view donations." };
@@ -189,7 +215,7 @@ export async function getDonations(
 
 export async function getDonation(
   id: string
-): Promise<ActionResult<Record<string, unknown>>> {
+): Promise<ActionResult<Donation>> {
   const { supabase, user } = await getAuthenticatedUser();
   if (!supabase || !user) {
     return { error: "You must be signed in to view this donation." };
@@ -252,14 +278,19 @@ export async function updateDonation(
     return { error: "No fields to update." };
   }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("donations")
     .update(updates)
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .select("id");
 
   if (error) {
     return { error: `Failed to update donation: ${error.message}` };
+  }
+
+  if (!updated || updated.length === 0) {
+    return { error: "Donation not found." };
   }
 
   return {};
@@ -273,14 +304,19 @@ export async function deleteDonation(id: string): Promise<ActionResult> {
     return { error: "You must be signed in to delete a donation." };
   }
 
-  const { error } = await supabase
+  const { data: deleted, error } = await supabase
     .from("donations")
     .delete()
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .select("id");
 
   if (error) {
     return { error: `Failed to delete donation: ${error.message}` };
+  }
+
+  if (!deleted || deleted.length === 0) {
+    return { error: "Donation not found." };
   }
 
   return {};
