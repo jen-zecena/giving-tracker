@@ -147,14 +147,11 @@ export default function NewDonationPage() {
         description: `$${numAmount.toFixed(2)} to ${organizationName.trim()}`,
         action: {
           label: "Log another",
-          onClick: () => {
-            resetForm();
-          },
+          onClick: () => router.push("/donations/new"),
         },
       });
 
-      // Reset form for potential next entry
-      resetForm();
+      router.push("/donations");
     });
   }
 
