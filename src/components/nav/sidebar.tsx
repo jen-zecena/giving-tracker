@@ -1,104 +1,227 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  Heart,
+  Home,
+  List,
+  Plus,
+  Users,
+  Compass,
+  User,
+  Building2,
+  Target,
+  Award,
   Settings,
-  LogOut,
-  ChevronLeft,
-  ChevronRight,
+  Heart,
+  Menu,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/donations", label: "Donations", icon: Heart },
-  { href: "/settings", label: "Settings", icon: Settings },
+const menuItems = [
+  { icon: Home, label: "Overview", href: "/dashboard" },
+  { icon: List, label: "My Donations", href: "/donations" },
+  { icon: Plus, label: "Add Donation", href: "/donations/new" },
+  { icon: Users, label: "Feed", href: "/feed" },
+  { icon: Compass, label: "Discover", href: "/discover" },
+  { icon: User, label: "Profile", href: "/profile" },
+  { icon: Building2, label: "Nonprofits", href: "/nonprofits" },
+  { icon: Target, label: "Personal Goals", href: "/goals" },
+  { icon: Award, label: "Milestones", href: "/badges" },
 ];
 
-export function Sidebar({ onSignOut }: { onSignOut: () => void }) {
+const bottomNavItems = [
+  { icon: Home, label: "Overview", href: "/dashboard" },
+  { icon: List, label: "Donations", href: "/donations" },
+  { icon: Plus, label: "Add", href: "/donations/new" },
+  { icon: Users, label: "Feed", href: "/feed" },
+  { icon: User, label: "Profile", href: "/profile" },
+];
+
+function isActive(pathname: string, href: string) {
+  if (href === "/dashboard") return pathname === "/dashboard";
+  return pathname === href || pathname.startsWith(href + "/");
+}
+
+export function Sidebar() {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const handleNavigation = () => {
+    setIsMobileMenuOpen(false);
+  };
 
   return (
-    <aside
-      className={cn(
-        "hidden md:flex flex-col border-r border-border bg-sidebar text-sidebar-foreground transition-[width] duration-200",
-        collapsed ? "w-16" : "w-56"
-      )}
-    >
-      {/* Logo + collapse toggle */}
-      <div className="flex h-14 items-center justify-between px-4">
-        <div className="flex items-center gap-2">
-          <Heart className="h-5 w-5 shrink-0 text-sidebar-primary" />
-          {!collapsed && (
-            <span className="text-sm font-semibold tracking-tight">
+    <>
+      {/* ── Mobile header ─────────────────────────────────────── */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b border-border">
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-primary to-chart-2 rounded-lg flex items-center justify-center">
+              <Heart className="w-4 h-4 text-primary-foreground" />
+            </div>
+            <h1 className="text-lg font-semibold text-foreground">
               Giving Tracker
-            </span>
-          )}
+            </h1>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label="Toggle menu"
+          >
+            {isMobileMenuOpen ? (
+              <X className="w-6 h-6" />
+            ) : (
+              <Menu className="w-6 h-6" />
+            )}
+          </Button>
         </div>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          className="text-sidebar-foreground/50 hover:text-sidebar-foreground"
-          onClick={() => setCollapsed(!collapsed)}
-        >
-          {collapsed ? (
-            <ChevronRight className="h-3.5 w-3.5" />
-          ) : (
-            <ChevronLeft className="h-3.5 w-3.5" />
-          )}
-        </Button>
       </div>
 
-      <Separator className="bg-sidebar-border" />
+      {/* ── Mobile overlay ────────────────────────────────────── */}
+      {isMobileMenuOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
 
-      {/* Nav links */}
-      <nav className="flex-1 space-y-1 px-2 py-3">
-        {navItems.map(({ href, label, icon: Icon }) => {
-          const isActive =
-            pathname === href || pathname.startsWith(href + "/");
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
-                isActive
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-sidebar-foreground/70"
-              )}
+      {/* ── Sidebar (desktop fixed + mobile drawer) ───────────── */}
+      <aside
+        className={cn(
+          "fixed top-0 h-screen w-[260px] bg-card border-r border-border flex flex-col z-40",
+          "lg:left-0",
+          isMobileMenuOpen ? "left-0" : "-left-[260px]",
+          "transition-[left] duration-300 ease-in-out"
+        )}
+      >
+        {/* Logo — desktop only */}
+        <div className="hidden lg:block p-6 border-b border-border">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-primary to-chart-2 rounded-xl flex items-center justify-center">
+              <Heart className="w-5 h-5 text-primary-foreground" />
+            </div>
+            <h1 className="text-lg font-semibold text-foreground">
+              Giving Tracker
+            </h1>
+          </div>
+        </div>
+
+        {/* Logo — mobile drawer header */}
+        <div className="lg:hidden p-6 border-b border-border">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-primary to-chart-2 rounded-xl flex items-center justify-center">
+                <Heart className="w-5 h-5 text-primary-foreground" />
+              </div>
+              <h1 className="text-lg font-semibold text-foreground">
+                Giving Tracker
+              </h1>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsMobileMenuOpen(false)}
+              aria-label="Close menu"
             >
-              <Icon className="h-4 w-4 shrink-0" />
-              {!collapsed && <span>{label}</span>}
-            </Link>
-          );
-        })}
-      </nav>
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
+        </div>
 
-      {/* Bottom section */}
-      <div className="px-2 pb-3">
-        <Separator className="mb-2 bg-sidebar-border" />
-        <button
-          onClick={onSignOut}
-          className={cn(
-            "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-            "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
-            "text-sidebar-foreground/70"
-          )}
-        >
-          <LogOut className="h-4 w-4 shrink-0" />
-          {!collapsed && <span>Sign out</span>}
-        </button>
+        {/* Nav items */}
+        <nav className="flex-1 p-4 overflow-y-auto">
+          <div className="space-y-1">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              const active = isActive(pathname, item.href);
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={handleNavigation}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    active
+                      ? "bg-primary text-primary-foreground"
+                      : "text-foreground/70 hover:bg-muted active:scale-[0.98]"
+                  )}
+                  aria-current={active ? "page" : undefined}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+
+        {/* Bottom section — Settings */}
+        <div className="p-4 border-t border-border">
+          <Link
+            href="/settings"
+            onClick={handleNavigation}
+            className={cn(
+              "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              isActive(pathname, "/settings")
+                ? "bg-primary text-primary-foreground"
+                : "text-foreground/70 hover:bg-muted"
+            )}
+            aria-label="Settings"
+          >
+            <Settings className="w-5 h-5" />
+            <span>Settings</span>
+          </Link>
+        </div>
+      </aside>
+
+      {/* ── Mobile bottom nav ─────────────────────────────────── */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-card border-t border-border">
+        <div className="grid grid-cols-5 gap-1 p-2">
+          {bottomNavItems.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(pathname, item.href);
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex flex-col items-center gap-1 py-2 px-1 rounded-lg transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  active
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+                aria-label={item.label}
+                aria-current={active ? "page" : undefined}
+              >
+                <Icon
+                  className={cn(
+                    "w-6 h-6",
+                    active ? "stroke-[2.5]" : "stroke-2"
+                  )}
+                />
+                <span
+                  className={cn(
+                    "text-xs",
+                    active ? "font-semibold" : "font-normal"
+                  )}
+                >
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
       </div>
-    </aside>
+    </>
   );
 }
