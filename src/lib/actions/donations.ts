@@ -1,5 +1,8 @@
 "use server";
 
+import { revalidatePath, updateTag } from "next/cache";
+
+import { dashboardTag } from "@/lib/queries/dashboard";
 import { createClient } from "@/lib/supabase/server";
 import type {
   Donation,
@@ -9,6 +12,12 @@ import type {
   CauseTag,
   RecurringFrequency,
 } from "@/types";
+
+function invalidateDashboard(userId: string) {
+  updateTag(dashboardTag(userId));
+  revalidatePath("/dashboard");
+  revalidatePath("/donations");
+}
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -150,6 +159,7 @@ export async function createDonation(
       .eq("id", donation.id);
   }
 
+  invalidateDashboard(user.id);
   return { data: { id: donation.id } };
 }
 
@@ -293,6 +303,7 @@ export async function updateDonation(
     return { error: "Donation not found." };
   }
 
+  invalidateDashboard(user.id);
   return {};
 }
 
@@ -319,5 +330,6 @@ export async function deleteDonation(id: string): Promise<ActionResult> {
     return { error: "Donation not found." };
   }
 
+  invalidateDashboard(user.id);
   return {};
 }
