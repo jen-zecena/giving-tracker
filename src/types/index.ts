@@ -22,6 +22,33 @@ export type RecurringFrequency = "weekly" | "monthly" | "quarterly" | "annually"
 
 export type DonationStatus = "confirmed" | "pending" | "skipped";
 
+export type FollowRequestStatus = "pending" | "accepted" | "rejected";
+
+export type GoalType = "amount" | "count" | "organizations" | "causes";
+
+export type GoalTimeframe = "month" | "year" | "ongoing";
+
+export type NotificationType =
+  | "like"
+  | "follow"
+  | "follow_request"
+  | "badge"
+  | "milestone"
+  | "pending_donation";
+
+export type NonprofitFlagReason =
+  | "fraud"
+  | "outdated"
+  | "duplicate"
+  | "inappropriate"
+  | "other";
+
+export type NonprofitFlagStatus =
+  | "pending"
+  | "reviewed"
+  | "resolved"
+  | "dismissed";
+
 // ============================================================
 // Database row types
 // ============================================================
@@ -83,6 +110,84 @@ export interface PrivacyOverride {
   user_id: string;
   field_name: string;
   is_visible: boolean;
+  created_at: string;
+}
+
+export interface Follow {
+  id: string;
+  follower_id: string;
+  following_id: string;
+  created_at: string;
+}
+
+export interface FollowRequest {
+  id: string;
+  from_user_id: string;
+  to_user_id: string;
+  status: FollowRequestStatus;
+  created_at: string;
+}
+
+export interface Like {
+  id: string;
+  user_id: string;
+  donation_id: string;
+  donation_user_id: string;
+  created_at: string;
+}
+
+export interface Goal {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+  type: GoalType;
+  target: number;
+  current: number;
+  timeframe: GoalTimeframe;
+  created_at: string;
+}
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  read: boolean;
+  action_url: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface Nonprofit {
+  id: string;
+  ein: string;
+  name: string;
+  mission: string | null;
+  category: string[];
+  location: string | null;
+  website: string | null;
+  donation_url: string | null;
+  verified: boolean;
+  logo_url: string | null;
+  description: string | null;
+  founded: number | null;
+  size: string | null;
+  revenue: number | null;
+  tags: string[];
+  synced_at: string | null;
+  created_at: string;
+}
+
+export interface NonprofitFlag {
+  id: string;
+  nonprofit_id: string;
+  user_id: string;
+  reason: NonprofitFlagReason;
+  description: string | null;
+  status: NonprofitFlagStatus;
+  admin_notes: string | null;
   created_at: string;
 }
 
