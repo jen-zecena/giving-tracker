@@ -36,6 +36,10 @@ export interface Profile {
   privacy_tier: PrivacyTier;
   salary_updated_at: string | null;
   onboarding_completed: boolean;
+  is_admin: boolean;
+  show_amounts_to_friends: boolean;
+  show_percentage_publicly: boolean;
+  email_notifications: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -56,6 +60,7 @@ export interface Donation {
   recurring_schedule_id: string | null;
   status: DonationStatus;
   is_private_override: boolean;
+  hide_from_feed: boolean;
   created_at: string;
   updated_at: string;
 }
