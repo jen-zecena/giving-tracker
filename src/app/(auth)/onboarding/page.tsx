@@ -1,10 +1,26 @@
-export default function OnboardingPage() {
-  return (
-    <div className="w-full max-w-sm space-y-4 text-center">
-      <h1 className="text-2xl font-semibold tracking-tight">Welcome!</h1>
-      <p className="text-muted-foreground">
-        Onboarding flow will appear here.
-      </p>
-    </div>
-  );
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { OnboardingWizard } from "./onboarding-wizard";
+
+export default async function OnboardingPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("display_name, onboarding_completed")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.onboarding_completed) {
+    redirect("/dashboard");
+  }
+
+  return <OnboardingWizard initialDisplayName={profile?.display_name} />;
 }
