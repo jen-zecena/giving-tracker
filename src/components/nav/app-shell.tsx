@@ -1,15 +1,21 @@
 "use client";
 
+import { ReactNode } from "react";
 import { Sidebar } from "@/components/nav/sidebar";
-import { BottomNav } from "@/components/nav/bottom-nav";
-import { signOut } from "@/lib/actions/auth";
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+interface AppShellProps {
+  children: ReactNode;
+}
+
+export function AppShell({ children }: AppShellProps) {
   return (
-    <div className="flex h-screen">
-      <Sidebar onSignOut={signOut} />
-      <main className="flex-1 overflow-y-auto pb-16 md:pb-0">{children}</main>
-      <BottomNav />
+    <div className="flex min-h-screen bg-background">
+      <Sidebar />
+
+      {/* Main content — offset for sidebar on desktop, header/footer on mobile */}
+      <main className="flex-1 lg:ml-[260px] pt-16 lg:pt-0 pb-20 lg:pb-0">
+        {children}
+      </main>
     </div>
   );
 }

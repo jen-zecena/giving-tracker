@@ -1,10 +1,18 @@
+import { PageHeader } from "@/components/nav/page-header";
+
 export default function SettingsPage() {
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-      <p className="mt-2 text-muted-foreground">
-        Account settings will appear here.
-      </p>
-    </div>
+    <>
+      <PageHeader
+        title="Settings"
+        subtitle="Manage your account"
+        showAddButton={false}
+      />
+      <div className="p-4 sm:p-6 lg:p-8">
+        <p className="text-muted-foreground">
+          Account settings will appear here.
+        </p>
+      </div>
+    </>
   );
 }
