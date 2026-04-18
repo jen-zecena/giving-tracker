@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 const publicRoutes = [
-  "/",              // TODO: remove once "/" becomes the authenticated dashboard (see #44)
+  "/",
   "/login",
   "/register",
   "/auth/callback",
@@ -55,9 +55,9 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Redirect authenticated users away from login/register pages
-  const authOnlyRoutes = ["/login", "/register"];
-  if (user && authOnlyRoutes.some((route) => pathname === route)) {
+  // Redirect authenticated users away from landing/login/register to dashboard
+  const guestOnlyRoutes = ["/", "/login", "/register"];
+  if (user && guestOnlyRoutes.some((route) => pathname === route)) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
