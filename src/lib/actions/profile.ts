@@ -13,8 +13,6 @@ export type ActionResult<T = null> = {
   data?: T;
 };
 
-export type { SettingsUpdate };
-
 async function getAuthed() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
