@@ -12,8 +12,10 @@ import { PageHeader } from "@/components/nav/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { WelcomeChecklist } from "@/components/welcome-checklist";
 
 import { getDashboardData } from "@/lib/queries/dashboard";
+import { getChecklistStatus } from "@/lib/queries/welcome-checklist";
 import type { CauseBreakdown, Donation, MoMComparison } from "@/types";
 
 import { MetricCards } from "./metric-cards";
@@ -47,7 +49,10 @@ function formatCurrency(amount: number): string {
 // ── Page ──────────────────────────────────────────────────
 
 export default async function DashboardPage() {
-  const data = await getDashboardData();
+  const [data, checklistStatus] = await Promise.all([
+    getDashboardData(),
+    getChecklistStatus(),
+  ]);
   const isEmpty = data.summary.ytd_count === 0 && data.recent.length === 0;
 
   return (
@@ -56,9 +61,14 @@ export default async function DashboardPage() {
 
       <div className="p-4 sm:p-6 lg:p-8">
         {isEmpty ? (
-          <EmptyState />
+          <div className="space-y-6">
+            <WelcomeChecklist status={checklistStatus} />
+            <EmptyState />
+          </div>
         ) : (
           <div className="space-y-6">
+            <WelcomeChecklist status={checklistStatus} />
+
             {/* Metric Cards */}
             <MetricCards
               ytdTotal={data.summary.ytd_total}
