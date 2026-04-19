@@ -8,6 +8,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 
+import { InsightsCard } from "@/components/insights-card";
 import { PageHeader } from "@/components/nav/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -94,6 +95,7 @@ export default async function DashboardPage() {
 
               {/* Right Sidebar */}
               <div className="space-y-6">
+                <InsightsCard />
                 <MoMCard mom={data.mom} />
                 <RecentActivityCard donations={data.recent} />
               </div>
