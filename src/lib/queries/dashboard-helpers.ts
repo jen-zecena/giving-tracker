@@ -76,6 +76,38 @@ export function calculateStreak(
   return streak;
 }
 
+/**
+ * Finds the longest run of consecutive months present in the set.
+ * Scans all months between `earliest` and `latest` in the set.
+ */
+export function calculateLongestStreak(
+  monthsWithDonations: ReadonlySet<string>
+): number {
+  if (monthsWithDonations.size === 0) return 0;
+
+  const sorted = Array.from(monthsWithDonations).sort();
+  const earliest = sorted[0];
+  const latest = sorted[sorted.length - 1];
+
+  const startDate = new Date(earliest + "-01T00:00:00");
+  const endDate = new Date(latest + "-01T00:00:00");
+
+  let longest = 0;
+  let run = 0;
+  const d = new Date(startDate);
+  while (d <= endDate) {
+    if (monthsWithDonations.has(getMonthKey(d))) {
+      run++;
+      if (run > longest) longest = run;
+    } else {
+      run = 0;
+    }
+    d.setMonth(d.getMonth() + 1);
+  }
+
+  return longest;
+}
+
 // ── Salary milestone ──────────────────────────────────────
 
 /**
