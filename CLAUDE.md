@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Working With the User
+
+- **Ask, don't assume.** If anything is unclear — scope, design intent, requirements, naming, behavior — ask a clarifying question before acting. A short clarification round is cheaper than rework.
+- **Be transparent about uncertainty.** When you proceed without full confidence, say so explicitly ("I'm assuming X — let me know if that's wrong" / "I'm not sure about Y, going with Z because…"). Don't paper over gaps.
+- **Applies to subagents too.** When spawning a subagent, instruct it to surface questions back rather than guess, and relay those questions to the user.
+
 ## Project
 
 Giving Tracker — "Strava for charitable donations." A web app that helps people track, visualize, and share their charitable giving. Solo developer project, freemium model, tracking-only (no payment processing). Licensed under Apache 2.0.
