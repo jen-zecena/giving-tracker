@@ -81,9 +81,14 @@ async function getAuthenticatedUser() {
 
 // ── Create ─────────────────────────────────────────────────
 
+export type CreateDonationResult = {
+  id: string;
+  total_count: number; // total donations for this user (including the new one)
+};
+
 export async function createDonation(
   data: DonationFormData
-): Promise<ActionResult<{ id: string }>> {
+): Promise<ActionResult<CreateDonationResult>> {
   const { supabase, user } = await getAuthenticatedUser();
   if (!supabase || !user) {
     return { error: "You must be signed in to log a donation." };
@@ -119,6 +124,7 @@ export async function createDonation(
       is_recurring: data.is_recurring,
       status: data.is_recurring ? "pending" : "confirmed",
       is_private_override: data.is_private_override,
+      hide_from_feed: data.hide_from_feed ?? false,
     })
     .select("id")
     .single();
@@ -146,8 +152,9 @@ export async function createDonation(
       .single();
 
     if (scheduleError || !schedule) {
+      invalidateDashboard(user.id);
       return {
-        data: { id: donation.id },
+        data: { id: donation.id, total_count: 1 },
         error: "Donation saved, but recurring schedule could not be created. Please set it up manually.",
       };
     }
@@ -159,8 +166,48 @@ export async function createDonation(
       .eq("id", donation.id);
   }
 
+  // Count donations for milestone toasts
+  const { count } = await supabase
+    .from("donations")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id);
+
   invalidateDashboard(user.id);
-  return { data: { id: donation.id } };
+  return { data: { id: donation.id, total_count: count ?? 1 } };
+}
+
+// ── Organization autocomplete ──────────────────────────────
+
+export async function getOrganizationSuggestions(): Promise<
+  ActionResult<string[]>
+> {
+  const { supabase, user } = await getAuthenticatedUser();
+  if (!supabase || !user) {
+    return { error: "You must be signed in." };
+  }
+
+  const { data, error } = await supabase
+    .from("donations")
+    .select("organization_name")
+    .eq("user_id", user.id)
+    .order("donation_date", { ascending: false })
+    .limit(200);
+
+  if (error) {
+    return { error: `Failed to load organization history: ${error.message}` };
+  }
+
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  for (const row of data ?? []) {
+    const name = row.organization_name?.trim();
+    if (name && !seen.has(name.toLowerCase())) {
+      seen.add(name.toLowerCase());
+      unique.push(name);
+    }
+  }
+
+  return { data: unique };
 }
 
 // ── Read (list with filters + pagination) ──────────────────
@@ -283,6 +330,8 @@ export async function updateDonation(
     updates.is_tax_deductible = data.is_tax_deductible;
   if (data.is_private_override !== undefined)
     updates.is_private_override = data.is_private_override;
+  if (data.hide_from_feed !== undefined)
+    updates.hide_from_feed = data.hide_from_feed;
 
   if (Object.keys(updates).length === 0) {
     return { error: "No fields to update." };

@@ -212,6 +212,7 @@ export interface DonationFormData {
   notes?: string;
   is_tax_deductible: boolean;
   is_private_override: boolean;
+  hide_from_feed?: boolean;
 }
 
 // ============================================================
