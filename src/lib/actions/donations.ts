@@ -27,11 +27,13 @@ export type ActionResult<T = null> = {
 };
 
 export type DonationListFilters = {
+  search?: string;
   dateFrom?: string;
   dateTo?: string;
   scope?: DonationScope;
   causeTag?: CauseTag;
   status?: DonationStatus;
+  sortBy?: "newest" | "oldest" | "highest" | "lowest";
   page?: number;
   pageSize?: number;
 };
@@ -225,14 +227,22 @@ export async function getDonations(
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
+  // Sort
+  const sortBy = filters.sortBy ?? "newest";
+  const orderCol = sortBy === "highest" || sortBy === "lowest" ? "amount" : "donation_date";
+  const ascending = sortBy === "oldest" || sortBy === "lowest";
+
   // Build query
   let query = supabase
     .from("donations")
     .select("*", { count: "exact" })
     .eq("user_id", user.id)
-    .order("donation_date", { ascending: false })
+    .order(orderCol, { ascending })
     .range(from, to);
 
+  if (filters.search) {
+    query = query.ilike("organization_name", `%${filters.search}%`);
+  }
   if (filters.dateFrom) {
     query = query.gte("donation_date", filters.dateFrom);
   }
@@ -266,6 +276,39 @@ export async function getDonations(
       totalPages: Math.ceil(total / pageSize),
     },
   };
+}
+
+// ── Summary (aggregate stats for cards) ──────────────────
+
+export type DonationsSummary = {
+  count: number;
+  total: number;
+  organizations: number;
+};
+
+export async function getDonationsSummary(): Promise<
+  ActionResult<DonationsSummary>
+> {
+  const { supabase, user } = await getAuthenticatedUser();
+  if (!supabase || !user) {
+    return { error: "You must be signed in to view donations." };
+  }
+
+  const { data, error } = await supabase
+    .from("donations")
+    .select("amount, organization_name")
+    .eq("user_id", user.id);
+
+  if (error) {
+    return { error: `Failed to fetch summary: ${error.message}` };
+  }
+
+  const items = data ?? [];
+  const count = items.length;
+  const total = items.reduce((sum, d) => sum + Number(d.amount), 0);
+  const organizations = new Set(items.map((d) => d.organization_name)).size;
+
+  return { data: { count, total, organizations } };
 }
 
 // ── Read (single) ──────────────────────────────────────────
