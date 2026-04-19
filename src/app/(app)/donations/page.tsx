@@ -107,8 +107,11 @@ export default function DonationsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Filter state from URL
-  const [search, setSearch] = useState(searchParams.get("q") ?? "");
+  // Search is local-only — intentionally NOT persisted to the URL so the
+  // address bar stays quiet as the user types. cause/year/sort still sync
+  // to the URL below so those filters remain shareable.
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [causeFilter, setCauseFilter] = useState(
     searchParams.get("cause") ?? ""
   );
@@ -154,7 +157,7 @@ export default function DonationsPage() {
     try {
       const [donationsResult, summaryResult] = await Promise.all([
         getDonations({
-          search: search || undefined,
+          search: debouncedSearch || undefined,
           causeTag: (causeFilter as CauseTag) || undefined,
           dateFrom: yearFilter ? `${yearFilter}-01-01` : undefined,
           dateTo: yearFilter ? `${yearFilter}-12-31` : undefined,
@@ -174,7 +177,7 @@ export default function DonationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, causeFilter, yearFilter, sortBy]);
+  }, [debouncedSearch, causeFilter, yearFilter, sortBy]);
 
   useEffect(() => {
     fetchData();
@@ -185,7 +188,6 @@ export default function DonationsPage() {
   const updateFilters = useCallback(
     (updates: Record<string, string>) => {
       const params = {
-        q: search,
         cause: causeFilter,
         year: yearFilter,
         sort: sortBy,
@@ -193,16 +195,17 @@ export default function DonationsPage() {
       };
       syncUrl(params);
     },
-    [search, causeFilter, yearFilter, sortBy, syncUrl]
+    [causeFilter, yearFilter, sortBy, syncUrl]
   );
 
-  // Debounced search
+  // Debounce the search term before it hits the server so typing doesn't
+  // fire a query per keystroke. Search stays out of the URL entirely.
   useEffect(() => {
     const timer = setTimeout(() => {
-      updateFilters({ q: search });
+      setDebouncedSearch(search);
     }, 300);
     return () => clearTimeout(timer);
-  }, [search]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [search]);
 
   // ── Delete handler ────────────────────────────────────
 
