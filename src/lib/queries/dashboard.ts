@@ -38,11 +38,13 @@ import {
   calculateStreak,
   computeMoMComparison,
   countDistinctOrganizations,
+  generateInsights,
   getMonthKey,
   getMonthKeyWithOffset,
   getMonthStart,
   getYTDStart,
   nextSalaryMilestone,
+  type Insight,
 } from "./dashboard-helpers";
 
 // ── Cache tag convention ──────────────────────────────────
@@ -100,7 +102,13 @@ const fetchLast12Months = cache(async (): Promise<{
   userId: string | null;
   rows: Array<Pick<
     Donation,
-    "amount" | "donation_date" | "scope" | "cause_tag" | "status" | "organization_name"
+    | "amount"
+    | "donation_date"
+    | "scope"
+    | "cause_tag"
+    | "status"
+    | "organization_name"
+    | "is_recurring"
   >>;
 }> => {
   const userId = await getUserId();
@@ -111,7 +119,9 @@ const fetchLast12Months = cache(async (): Promise<{
 
   const { data } = await supabase
     .from("donations")
-    .select("amount, donation_date, scope, cause_tag, status, organization_name")
+    .select(
+      "amount, donation_date, scope, cause_tag, status, organization_name, is_recurring"
+    )
     .eq("user_id", userId)
     .gte("donation_date", twelveMonthsAgo)
     .order("donation_date", { ascending: false });
@@ -239,6 +249,14 @@ export const getRecentDonations = cache(
     return data ?? [];
   }
 );
+
+// ── Insights (up to 3 for the Dashboard InsightsCard) ─────
+
+export const getInsights = cache(async (): Promise<Insight[]> => {
+  const { userId, rows } = await fetchLast12Months();
+  if (!userId) return [];
+  return generateInsights(rows);
+});
 
 // ── Aggregate (single call for the Dashboard page) ────────
 

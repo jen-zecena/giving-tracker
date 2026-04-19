@@ -213,3 +213,154 @@ export function countDistinctOrganizations(
   }
   return set.size;
 }
+
+// ── Insights ──────────────────────────────────────────────
+
+/**
+ * Icon identifiers for insight rows. The component layer maps these to
+ * concrete `lucide-react` icons + color tokens so this module stays free
+ * of React / icon imports and remains trivially unit-testable.
+ */
+export type InsightIcon =
+  | "trending-up"
+  | "heart"
+  | "award-orgs"
+  | "sparkles"
+  | "award-month";
+
+export interface Insight {
+  key: string; // stable key for React list rendering
+  icon: InsightIcon;
+  text: string;
+}
+
+type InsightRow = DonationRowForAggregation & {
+  is_recurring?: boolean;
+};
+
+function monthLabel(date: Date): string {
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+}
+
+/**
+ * Produces up to 3 data-driven insights from the user's donation rows,
+ * in priority order:
+ *   1. MoM percentage increase (if this month > last month)
+ *   2. Top cause (with % of all confirmed donations)
+ *   3. Unique orgs supported this month (≥2)
+ *   4. Recurring consistency (has any recurring donation)
+ *   5. Most generous month (when ≥2 months have activity)
+ *
+ * Returns `[]` when the user has no confirmed donations — the component
+ * layer hides the card in that case, per the Figma port's acceptance
+ * criteria.
+ */
+export function generateInsights(
+  rows: ReadonlyArray<InsightRow>,
+  now: Date = new Date()
+): Insight[] {
+  const confirmed = rows.filter((r) => !r.status || r.status === "confirmed");
+  if (confirmed.length === 0) return [];
+
+  const insights: Insight[] = [];
+
+  // 1. MoM percentage increase
+  const thisMonthKey = getMonthKey(now);
+  const lastMonthKey = getMonthKeyWithOffset(now, -1);
+  const thisMonthRows = confirmed.filter(
+    (r) => getMonthKey(r.donation_date) === thisMonthKey
+  );
+  const lastMonthRows = confirmed.filter(
+    (r) => getMonthKey(r.donation_date) === lastMonthKey
+  );
+  const thisMonthTotal = thisMonthRows.reduce((s, r) => s + r.amount, 0);
+  const lastMonthTotal = lastMonthRows.reduce((s, r) => s + r.amount, 0);
+
+  if (lastMonthTotal > 0 && thisMonthTotal > lastMonthTotal) {
+    const pct = Math.round(
+      ((thisMonthTotal - lastMonthTotal) / lastMonthTotal) * 100
+    );
+    insights.push({
+      key: "mom-increase",
+      icon: "trending-up",
+      text: `You're giving ${pct}% more than last month!`,
+    });
+  }
+
+  // 2. Top cause (includes uncategorized, mirrors the Figma behavior)
+  const causeCounts = new Map<string, number>();
+  for (const r of confirmed) {
+    const key = r.cause_tag ?? "uncategorized";
+    causeCounts.set(key, (causeCounts.get(key) ?? 0) + 1);
+  }
+  const sortedCauses = Array.from(causeCounts.entries()).sort(
+    (a, b) => b[1] - a[1]
+  );
+  const topCause = sortedCauses[0];
+  if (topCause) {
+    const [tag, count] = topCause;
+    const pct = Math.round((count / confirmed.length) * 100);
+    insights.push({
+      key: "top-cause",
+      icon: "heart",
+      text: `${humanizeCauseTag(tag)} is your top cause (${pct}% of donations)`,
+    });
+  }
+
+  // 3. Unique orgs this month
+  const uniqueOrgsThisMonth = new Set(
+    thisMonthRows
+      .map((r) => r.organization_name?.trim().toLowerCase())
+      .filter((name): name is string => Boolean(name))
+  ).size;
+  if (uniqueOrgsThisMonth >= 2) {
+    insights.push({
+      key: "unique-orgs",
+      icon: "award-orgs",
+      text: `You've supported ${uniqueOrgsThisMonth} different organizations this month`,
+    });
+  }
+
+  // 4. Recurring consistency
+  const hasRecurring = rows.some((r) => r.is_recurring);
+  if (hasRecurring) {
+    insights.push({
+      key: "recurring",
+      icon: "sparkles",
+      text: "Your consistent giving creates lasting impact",
+    });
+  }
+
+  // 5. Most generous month (only when user has activity in ≥2 months)
+  const monthlyTotals = new Map<string, { total: number; date: Date }>();
+  for (const r of confirmed) {
+    const d = new Date(r.donation_date + "T00:00:00");
+    const key = monthLabel(d);
+    const entry = monthlyTotals.get(key) ?? { total: 0, date: d };
+    entry.total += r.amount;
+    monthlyTotals.set(key, entry);
+  }
+  if (monthlyTotals.size > 1) {
+    const top = Array.from(monthlyTotals.entries()).sort(
+      (a, b) => b[1].total - a[1].total
+    )[0];
+    insights.push({
+      key: "generous-month",
+      icon: "award-month",
+      text: `Your most generous month was ${top[0]}`,
+    });
+  }
+
+  return insights.slice(0, 3);
+}
+
+function humanizeCauseTag(tag: string): string {
+  if (tag === "uncategorized") return "Uncategorized";
+  return tag
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
