@@ -11,12 +11,13 @@ import {
   UserCheck,
   UserPlus,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -122,17 +123,14 @@ export function NotificationsDropdown() {
   return (
     <DropdownMenu onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger
-        render={
-          <Button
-            variant="outline"
-            size="icon"
-            className="relative border-border"
-            aria-label={
-              unreadCount > 0
-                ? `Notifications, ${unreadCount} unread`
-                : "Notifications"
-            }
-          />
+        className={cn(
+          buttonVariants({ variant: "outline", size: "icon" }),
+          "relative border-border"
+        )}
+        aria-label={
+          unreadCount > 0
+            ? `Notifications, ${unreadCount} unread`
+            : "Notifications"
         }
       >
         <Bell className="w-5 h-5 text-foreground/70" />
@@ -144,7 +142,9 @@ export function NotificationsDropdown() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[380px]">
         <div className="flex items-center justify-between px-2 py-2">
-          <DropdownMenuLabel className="p-0">Notifications</DropdownMenuLabel>
+          <span className="text-xs font-medium text-muted-foreground">
+            Notifications
+          </span>
           {unreadCount > 0 && (
             <Button
               variant="ghost"
