@@ -222,6 +222,8 @@ export interface DonationFormData {
 export interface DashboardSummary {
   ytd_total: number;
   ytd_count: number;
+  this_month_total: number;
+  organizations_count: number;
   pending_count: number;
   streak_months: number;
   salary_percentage: number | null; // null when salary not set
@@ -249,4 +251,13 @@ export interface MoMComparison {
   current_month_total: number;
   previous_month_total: number;
   percentage_change: number | null; // null if no previous data
+}
+
+export interface DashboardData {
+  summary: DashboardSummary;
+  monthly: MonthlyTotal[];
+  scope: ScopeBreakdown[];
+  cause: CauseBreakdown[];
+  mom: MoMComparison;
+  recent: Donation[];
 }

@@ -1,5 +1,8 @@
 "use server";
 
+import { revalidatePath, updateTag } from "next/cache";
+
+import { dashboardTag } from "@/lib/queries/dashboard";
 import { createClient } from "@/lib/supabase/server";
 import type {
   Donation,
@@ -9,6 +12,12 @@ import type {
   CauseTag,
   RecurringFrequency,
 } from "@/types";
+
+function invalidateDashboard(userId: string) {
+  updateTag(dashboardTag(userId));
+  revalidatePath("/dashboard");
+  revalidatePath("/donations");
+}
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -143,8 +152,9 @@ export async function createDonation(
       .single();
 
     if (scheduleError || !schedule) {
+      invalidateDashboard(user.id);
       return {
-        data: { id: donation.id, total_count: 0 },
+        data: { id: donation.id, total_count: 1 },
         error: "Donation saved, but recurring schedule could not be created. Please set it up manually.",
       };
     }
@@ -162,6 +172,7 @@ export async function createDonation(
     .select("id", { count: "exact", head: true })
     .eq("user_id", user.id);
 
+  invalidateDashboard(user.id);
   return { data: { id: donation.id, total_count: count ?? 1 } };
 }
 
@@ -341,6 +352,7 @@ export async function updateDonation(
     return { error: "Donation not found." };
   }
 
+  invalidateDashboard(user.id);
   return {};
 }
 
@@ -367,5 +379,6 @@ export async function deleteDonation(id: string): Promise<ActionResult> {
     return { error: "Donation not found." };
   }
 
+  invalidateDashboard(user.id);
   return {};
 }
