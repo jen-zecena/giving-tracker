@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, Sparkles } from "lucide-react";
@@ -103,7 +103,7 @@ interface NewDonationFormProps {
 
 export function NewDonationForm({ initialOrgs }: NewDonationFormProps) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [submitting, setSubmitting] = useState(false);
 
   const [isQuickMode, setIsQuickMode] = useState(true);
 
@@ -185,8 +185,9 @@ export function NewDonationForm({ initialOrgs }: NewDonationFormProps) {
     }
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submitting) return;
 
     const numAmount = parseFloat(amount);
     if (!amount || isNaN(numAmount) || numAmount <= 0) {
@@ -203,16 +204,16 @@ export function NewDonationForm({ initialOrgs }: NewDonationFormProps) {
     }
 
     const orgName = organization.trim();
+    setSubmitting(true);
 
-    startTransition(async () => {
+    try {
       const result = await createDonation({
         organization_name: orgName,
         amount: numAmount,
         donation_date: format(donationDate, "yyyy-MM-dd"),
         scope,
         is_recurring: isQuickMode ? false : isRecurring,
-        frequency:
-          !isQuickMode && isRecurring ? frequency : undefined,
+        frequency: !isQuickMode && isRecurring ? frequency : undefined,
         cause_tag: causeTag || null,
         custom_tag: isQuickMode ? undefined : customTag.trim() || undefined,
         notes: isQuickMode ? undefined : notes.trim() || undefined,
@@ -223,6 +224,7 @@ export function NewDonationForm({ initialOrgs }: NewDonationFormProps) {
 
       if (result.error && !result.data) {
         toast.error(result.error);
+        setSubmitting(false);
         return;
       }
 
@@ -238,8 +240,11 @@ export function NewDonationForm({ initialOrgs }: NewDonationFormProps) {
       });
 
       router.push("/donations");
-      router.refresh();
-    });
+    } catch (err) {
+      console.error("Failed to log donation", err);
+      toast.error("Something went wrong. Please try again.");
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -324,16 +329,16 @@ export function NewDonationForm({ initialOrgs }: NewDonationFormProps) {
                 variant="outline"
                 onClick={() => router.push("/dashboard")}
                 className="flex-1"
-                disabled={pending}
+                disabled={submitting}
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 className="flex-1"
-                disabled={pending}
+                disabled={submitting}
               >
-                {pending ? "Logging…" : "Log Donation"}
+                {submitting ? "Logging…" : "Log Donation"}
               </Button>
             </div>
           </form>
