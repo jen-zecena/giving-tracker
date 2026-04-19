@@ -1,7 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { Bell, Heart, UserPlus, Award } from "lucide-react";
+import { useCallback, useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Award,
+  Bell,
+  Clock,
+  Heart,
+  Trophy,
+  UserCheck,
+  UserPlus,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,89 +20,125 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  getNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+  type NotificationItem,
+} from "@/lib/actions/notifications";
+import { timeAgo } from "@/lib/time";
+import type { NotificationType } from "@/types";
 
-interface Notification {
-  id: string;
-  type: "like" | "follow" | "badge" | "milestone";
-  title: string;
-  message: string;
-  time: string;
-  read: boolean;
-}
-
-// Mock notifications — DP-023 will wire to real data
-const MOCK_NOTIFICATIONS: Notification[] = [
-  {
-    id: "1",
-    type: "follow",
-    title: "New Follower",
-    message: "Sarah Johnson started following you",
-    time: "30m ago",
-    read: false,
-  },
-  {
-    id: "2",
-    type: "like",
-    title: "Someone liked your donation",
-    message: "Alex Martinez liked your donation to Red Cross",
-    time: "2h ago",
-    read: false,
-  },
-  {
-    id: "3",
-    type: "badge",
-    title: "New Badge Earned!",
-    message: 'You earned the "Generous Giver" badge',
-    time: "1d ago",
-    read: true,
-  },
-];
-
-const typeIcons: Record<Notification["type"], typeof Heart> = {
+const TYPE_ICONS: Record<NotificationType, typeof Heart> = {
   like: Heart,
   follow: UserPlus,
+  follow_request: UserCheck,
   badge: Award,
-  milestone: Bell,
+  milestone: Trophy,
+  pending_donation: Clock,
 };
 
-const typeColors: Record<Notification["type"], string> = {
+const TYPE_ICON_COLORS: Record<NotificationType, string> = {
   like: "text-destructive",
   follow: "text-info",
+  follow_request: "text-info",
   badge: "text-warning",
-  milestone: "text-muted-foreground",
+  milestone: "text-success",
+  pending_donation: "text-muted-foreground",
 };
 
 export function NotificationsDropdown() {
-  const [notifications, setNotifications] =
-    useState<Notification[]>(MOCK_NOTIFICATIONS);
+  const router = useRouter();
+  const [items, setItems] = useState<NotificationItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loaded, setLoaded] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [, startTransition] = useTransition();
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await getNotifications();
+      setItems(res.items);
+      setUnreadCount(res.unread_count);
+    } finally {
+      setLoaded(true);
+      setLoading(false);
+    }
+  }, []);
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map((n) => ({ ...n, read: true })));
-  };
+  useEffect(() => {
+    load();
+  }, [load]);
 
-  const markAsRead = (id: string) => {
-    setNotifications(
-      notifications.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
-  };
+  function handleOpenChange(open: boolean) {
+    if (open) load();
+  }
+
+  function handleItemClick(n: NotificationItem) {
+    // Optimistic: flip the unread dot immediately.
+    if (!n.read) {
+      setItems((prev) =>
+        prev.map((p) => (p.id === n.id ? { ...p, read: true } : p))
+      );
+      setUnreadCount((c) => Math.max(0, c - 1));
+
+      startTransition(async () => {
+        const res = await markNotificationRead(n.id);
+        if (res.error) {
+          // Revert on failure.
+          setItems((prev) =>
+            prev.map((p) => (p.id === n.id ? { ...p, read: false } : p))
+          );
+          setUnreadCount((c) => c + 1);
+        }
+      });
+    }
+
+    if (n.action_url) {
+      router.push(n.action_url);
+    }
+  }
+
+  function handleMarkAll() {
+    const prevItems = items;
+    const prevCount = unreadCount;
+
+    setItems((p) => p.map((n) => ({ ...n, read: true })));
+    setUnreadCount(0);
+
+    startTransition(async () => {
+      const res = await markAllNotificationsRead();
+      if (res.error) {
+        setItems(prevItems);
+        setUnreadCount(prevCount);
+      }
+    });
+  }
+
+  const badgeLabel =
+    unreadCount > 9 ? "9+" : unreadCount > 0 ? String(unreadCount) : null;
 
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger
         render={
           <Button
             variant="outline"
             size="icon"
             className="relative border-border"
+            aria-label={
+              unreadCount > 0
+                ? `Notifications, ${unreadCount} unread`
+                : "Notifications"
+            }
           />
         }
       >
         <Bell className="w-5 h-5 text-foreground/70" />
-        {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center font-semibold">
-            {unreadCount > 9 ? "9+" : unreadCount}
+        {badgeLabel && (
+          <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive font-mono text-xs font-semibold text-destructive-foreground">
+            {badgeLabel}
           </span>
         )}
       </DropdownMenuTrigger>
@@ -104,7 +149,7 @@ export function NotificationsDropdown() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={markAllAsRead}
+              onClick={handleMarkAll}
               className="h-auto p-1 text-xs text-primary hover:text-primary/80"
             >
               Mark all as read
@@ -113,41 +158,49 @@ export function NotificationsDropdown() {
         </div>
         <DropdownMenuSeparator />
 
-        {notifications.length === 0 ? (
+        {!loaded && loading ? (
           <div className="py-8 text-center text-sm text-muted-foreground">
-            <Bell className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+            Loading…
+          </div>
+        ) : items.length === 0 ? (
+          <div className="py-8 text-center text-sm text-muted-foreground">
+            <Bell className="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
             No notifications yet
           </div>
         ) : (
           <div className="max-h-[400px] overflow-y-auto">
-            {notifications.map((notification) => {
-              const Icon = typeIcons[notification.type];
-              const iconColor = typeColors[notification.type];
+            {items.map((n) => {
+              const Icon = TYPE_ICONS[n.type] ?? Bell;
+              const iconColor =
+                TYPE_ICON_COLORS[n.type] ?? "text-muted-foreground";
 
               return (
                 <DropdownMenuItem
-                  key={notification.id}
-                  className={`p-3 cursor-pointer ${!notification.read ? "bg-primary/5" : ""}`}
-                  onClick={() => markAsRead(notification.id)}
+                  key={n.id}
+                  className={`cursor-pointer p-3 ${
+                    !n.read ? "bg-primary/5" : ""
+                  }`}
+                  onClick={() => handleItemClick(n)}
                 >
-                  <div className="flex gap-3 w-full">
-                    <div className="flex-shrink-0 mt-1">
-                      <Icon className={`w-4 h-4 ${iconColor}`} />
+                  <div className="flex w-full gap-3">
+                    <div className="mt-1 flex-shrink-0">
+                      <Icon className={`h-4 w-4 ${iconColor}`} />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <p className="font-medium text-sm">
-                          {notification.title}
-                        </p>
-                        {!notification.read && (
-                          <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-1" />
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 flex items-start justify-between gap-2">
+                        <p className="text-sm font-medium">{n.title}</p>
+                        {!n.read && (
+                          <div
+                            className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-primary"
+                            aria-label="Unread"
+                          />
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {notification.message}
+                      <p className="line-clamp-2 text-sm text-muted-foreground">
+                        {n.message}
                       </p>
-                      <p className="text-xs text-muted-foreground/70 mt-1">
-                        {notification.time}
+                      <p className="mt-1 font-mono text-xs text-muted-foreground/70">
+                        {timeAgo(n.created_at)}
                       </p>
                     </div>
                   </div>
