@@ -11,6 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/nav/page-header";
 import {
   Tabs,
@@ -130,7 +131,7 @@ export default async function ProfilePage() {
           </TabsContent>
 
           <TabsContent value="followers" className="mt-4">
-            <EmptyTab
+            <EmptyState
               icon={Users}
               title="No followers yet"
               description="When people follow you, they'll show up here. We'll wire this up once the social features ship."
@@ -138,7 +139,7 @@ export default async function ProfilePage() {
           </TabsContent>
 
           <TabsContent value="following" className="mt-4">
-            <EmptyTab
+            <EmptyState
               icon={UserPlus}
               title="Not following anyone yet"
               description="Find other givers on the Discover tab. We'll surface them here once the social features ship."
@@ -255,21 +256,12 @@ function StatCard({
 function OverviewTab({ donations }: { donations: RecentDonation[] }) {
   if (donations.length === 0) {
     return (
-      <Card className="p-8 text-center">
-        <Heart
-          className="mx-auto h-8 w-8 text-muted-foreground"
-          aria-hidden="true"
-        />
-        <h3 className="mt-3 text-base font-semibold">No donations yet</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Log your first donation and it will show up here.
-        </p>
-        <div className="mt-4">
-          <Button render={<Link href="/donations/new" />}>
-            Add a donation
-          </Button>
-        </div>
-      </Card>
+      <EmptyState
+        icon={Heart}
+        title="No donations yet"
+        description="Log your first donation and it will show up here."
+        action={{ label: "Add a donation", href: "/donations/new" }}
+      />
     );
   }
 
@@ -319,27 +311,3 @@ function OverviewTab({ donations }: { donations: RecentDonation[] }) {
   );
 }
 
-// ── Empty tab placeholder ────────────────────────────────────
-
-function EmptyTab({
-  icon: Icon,
-  title,
-  description,
-}: {
-  icon: typeof Users;
-  title: string;
-  description: string;
-}) {
-  return (
-    <Card className="p-10 text-center">
-      <Icon
-        className="mx-auto h-8 w-8 text-muted-foreground"
-        aria-hidden="true"
-      />
-      <h3 className="mt-3 text-base font-semibold">{title}</h3>
-      <p className="mt-1 mx-auto max-w-sm text-sm text-muted-foreground">
-        {description}
-      </p>
-    </Card>
-  );
-}

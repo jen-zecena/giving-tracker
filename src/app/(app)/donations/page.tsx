@@ -14,9 +14,10 @@ import {
   Building2,
   DollarSign,
   RefreshCw,
-  FileX2,
+  HeartHandshake,
 } from "lucide-react";
 
+import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/nav/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -389,10 +390,20 @@ export default function DonationsPage() {
         {loading ? (
           <LoadingSkeleton />
         ) : donations.length === 0 ? (
-          <EmptyState
-            hasFilters={!!(search || causeFilter || yearFilter)}
-            totalCount={summary.count}
-          />
+          (search || causeFilter || yearFilter) && summary.count > 0 ? (
+            <EmptyState
+              icon={Search}
+              title="No matching donations"
+              description="Try adjusting your search or filters to find what you're looking for."
+            />
+          ) : (
+            <EmptyState
+              icon={HeartHandshake}
+              title="No donations yet"
+              description="Once you log a donation it'll show up here. You can always come back and edit or remove it."
+              action={{ label: "Log a donation", href: "/donations/new" }}
+            />
+          )
         ) : (
           <>
             <p className="text-sm text-muted-foreground">
@@ -551,54 +562,6 @@ function DonationRow({
             </Button>
           </div>
         </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// ── Empty States ──────────────────────────────────────────
-
-function EmptyState({
-  hasFilters,
-  totalCount,
-}: {
-  hasFilters: boolean;
-  totalCount: number;
-}) {
-  if (hasFilters && totalCount > 0) {
-    return (
-      <Card className="border-dashed">
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="rounded-full bg-muted p-3 mb-4">
-            <Search className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <h3 className="text-lg font-medium text-foreground mb-1">
-            No matching donations
-          </h3>
-          <p className="text-sm text-muted-foreground max-w-sm">
-            Try adjusting your search or filters to find what you&apos;re
-            looking for.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card className="border-dashed">
-      <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="rounded-full bg-muted p-3 mb-4">
-          <FileX2 className="h-6 w-6 text-muted-foreground" />
-        </div>
-        <h3 className="text-lg font-medium text-foreground mb-1">
-          No donations yet
-        </h3>
-        <p className="text-sm text-muted-foreground max-w-sm mb-4">
-          Start tracking your giving journey by logging your first donation.
-        </p>
-        <Button render={<Link href="/donations/new" />}>
-          Log your first donation
-        </Button>
       </CardContent>
     </Card>
   );
