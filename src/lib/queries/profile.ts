@@ -1,5 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import type { CauseTag, DonationScope, PrivacyTier } from "@/types";
+
+import {
+  orderSummariesByIds,
+  type ProfileSummary,
+} from "./profile-helpers";
+
+export { orderSummariesByIds, type ProfileSummary };
 
 export type ProfileStats = {
   total_donated: number;
@@ -31,6 +39,8 @@ export type ProfilePageData = {
   profile: ProfileHeader;
   stats: ProfileStats;
   recent_donations: RecentDonation[];
+  followers: ProfileSummary[];
+  following: ProfileSummary[];
 };
 
 /**
@@ -46,7 +56,14 @@ export async function getProfilePageData(): Promise<ProfilePageData | null> {
 
   if (!user) return null;
 
-  const [profileRes, donationsRes, followersRes, recentRes] = await Promise.all([
+  const [
+    profileRes,
+    donationsRes,
+    followersRes,
+    recentRes,
+    followerEdgesRes,
+    followingEdgesRes,
+  ] = await Promise.all([
     supabase
       .from("profiles")
       .select("display_name, bio, avatar_url, privacy_tier")
@@ -71,6 +88,35 @@ export async function getProfilePageData(): Promise<ProfilePageData | null> {
       .order("donation_date", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(5),
+    // follows_select RLS lets the owner read both sides of their edges,
+    // so these two queries don't need the service-role client.
+    supabase
+      .from("follows")
+      .select("follower_id, created_at")
+      .eq("following_id", user.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("follows")
+      .select("following_id, created_at")
+      .eq("follower_id", user.id)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  const followerIds = (followerEdgesRes.data ?? []).map(
+    (r) => r.follower_id as string
+  );
+  const followingIds = (followingEdgesRes.data ?? []).map(
+    (r) => r.following_id as string
+  );
+
+  // Profile summaries go through the service-role client because a
+  // `private`/`friends_only` follower's profile wouldn't be visible to
+  // the owner under the tier-aware profiles_select policy (DP-046) —
+  // yet the owner still needs to see who follows them. Scope is
+  // minimal: id, display_name, avatar_url, bio, privacy_tier.
+  const [followerSummaries, followingSummaries] = await Promise.all([
+    fetchProfileSummariesByIds(followerIds),
+    fetchProfileSummariesByIds(followingIds),
   ]);
 
   const profile: ProfileHeader = profileRes.data ?? {
@@ -102,7 +148,36 @@ export async function getProfilePageData(): Promise<ProfilePageData | null> {
     profile,
     stats,
     recent_donations,
+    followers: orderSummariesByIds(followerIds, followerSummaries),
+    following: orderSummariesByIds(followingIds, followingSummaries),
   };
+}
+
+
+/**
+ * Service-role lookup for profile summaries by id. Bypasses RLS — use
+ * only when the owner has a legitimate reason to see the info (e.g.
+ * someone follows them, they follow someone). Returns `[]` for empty
+ * input without round-tripping.
+ */
+async function fetchProfileSummariesByIds(
+  ids: ReadonlyArray<string>
+): Promise<ProfileSummary[]> {
+  if (ids.length === 0) return [];
+
+  const admin = createServiceRoleClient();
+  const { data } = await admin
+    .from("profiles")
+    .select("id, display_name, avatar_url, bio, privacy_tier")
+    .in("id", ids);
+
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    display_name: (row.display_name as string | null) ?? null,
+    avatar_url: (row.avatar_url as string | null) ?? null,
+    bio: (row.bio as string | null) ?? null,
+    privacy_tier: row.privacy_tier as PrivacyTier,
+  }));
 }
 
 export {

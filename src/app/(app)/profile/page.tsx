@@ -6,9 +6,9 @@ import {
   PenSquare,
   Repeat,
   Users,
-  UserPlus,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { FollowersTab, FollowingTab } from "./follow-lists";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/empty-state";
@@ -69,7 +69,8 @@ export default async function ProfilePage() {
   const data = await getProfilePageData();
   if (!data) redirect("/login");
 
-  const { profile, stats, recent_donations, user_email } = data;
+  const { profile, stats, recent_donations, user_email, followers, following } =
+    data;
   const tierMeta = privacyTierMeta(profile.privacy_tier);
   const displayName = profile.display_name?.trim() || "Your profile";
 
@@ -122,8 +123,22 @@ export default async function ProfilePage() {
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:grid-cols-none sm:inline-flex">
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="followers">Followers</TabsTrigger>
-            <TabsTrigger value="following">Following</TabsTrigger>
+            <TabsTrigger value="followers">
+              Followers
+              {followers.length > 0 && (
+                <span className="ml-1.5 text-xs text-muted-foreground">
+                  {followers.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="following">
+              Following
+              {following.length > 0 && (
+                <span className="ml-1.5 text-xs text-muted-foreground">
+                  {following.length}
+                </span>
+              )}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="mt-4">
@@ -131,19 +146,11 @@ export default async function ProfilePage() {
           </TabsContent>
 
           <TabsContent value="followers" className="mt-4">
-            <EmptyState
-              icon={Users}
-              title="No followers yet"
-              description="When people follow you, they'll show up here. We'll wire this up once the social features ship."
-            />
+            <FollowersTab followers={followers} />
           </TabsContent>
 
           <TabsContent value="following" className="mt-4">
-            <EmptyState
-              icon={UserPlus}
-              title="Not following anyone yet"
-              description="Find other givers on the Discover tab. We'll surface them here once the social features ship."
-            />
+            <FollowingTab following={following} />
           </TabsContent>
         </Tabs>
       </div>

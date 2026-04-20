@@ -195,6 +195,43 @@ export async function getFollowingIds(): Promise<ActionResult<string[]>> {
 }
 
 /**
+ * Removes a follower from the current user's followers list. The
+ * current user is the `following_id` side of the edge — normal
+ * `follows_delete` RLS is scoped to `follower_id = auth.uid()`, so the
+ * owner can't delete from their own Followers tab via the
+ * authenticated client. Service-role bypasses that; the action guards
+ * explicitly by pinning `following_id = user.id`.
+ *
+ * Idempotent: removing someone who doesn't follow the current user is
+ * a no-op success.
+ */
+export async function removeFollower(
+  followerId: string
+): Promise<ActionResult> {
+  const { user } = await getAuthed();
+  if (!user) return { error: "You must be signed in." };
+  if (!followerId) return { error: "Missing follower user id." };
+  if (followerId === user.id) {
+    return { error: "You can't remove yourself from your followers." };
+  }
+
+  const admin = createServiceRoleClient();
+  const { error } = await admin
+    .from("follows")
+    .delete()
+    .eq("follower_id", followerId)
+    .eq("following_id", user.id);
+
+  if (error) {
+    return { error: `Failed to remove follower: ${error.message}` };
+  }
+
+  revalidatePath(`/profile`);
+  revalidatePath(`/profile/${user.id}`);
+  return {};
+}
+
+/**
  * User ids that follow the current user.
  */
 export async function getFollowerIds(): Promise<ActionResult<string[]>> {
