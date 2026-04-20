@@ -105,24 +105,7 @@ export async function getProfilePageData(): Promise<ProfilePageData | null> {
   };
 }
 
-export type PrivacyTierMeta = {
-  label: string;
-  description: string;
-};
-
-export function privacyTierMeta(tier: PrivacyTier): PrivacyTierMeta {
-  switch (tier) {
-    case "private":
-      return { label: "Private", description: "Only you can see your giving" };
-    case "friends_only":
-      return {
-        label: "Friends Only",
-        description: "People you approve can see your activity",
-      };
-    case "open_giver":
-      return {
-        label: "Open Giver",
-        description: "Publicly discoverable",
-      };
-  }
-}
+export {
+  privacyTierMeta,
+  type PrivacyTierMeta,
+} from "@/lib/privacy-tier";
