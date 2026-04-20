@@ -31,11 +31,11 @@ import type {
   ScopeBreakdown,
 } from "@/types";
 
+import { BADGE_IDS, getEarnedBadgesCount } from "./badges";
 import {
   aggregateByCause,
   aggregateByScope,
   aggregateMonthly,
-  calculateStreak,
   computeMoMComparison,
   countDistinctOrganizations,
   generateInsights,
@@ -46,6 +46,7 @@ import {
   nextSalaryMilestone,
   type Insight,
 } from "./dashboard-helpers";
+import { getStreak } from "./streak";
 
 // ── Cache tag convention ──────────────────────────────────
 
@@ -61,7 +62,10 @@ const EMPTY_SUMMARY: DashboardSummary = {
   this_month_total: 0,
   organizations_count: 0,
   pending_count: 0,
-  streak_months: 0,
+  streak_current: 0,
+  streak_longest: 0,
+  earned_badges_count: 0,
+  total_badges_count: BADGE_IDS.length,
   salary_percentage: null,
   salary_milestone_target: null,
 };
@@ -148,24 +152,21 @@ export const getDashboardSummary = cache(async (): Promise<DashboardSummary> => 
     .filter((r) => getMonthKey(r.donation_date) === thisMonthKey)
     .reduce((s, r) => s + r.amount, 0);
 
-  const monthsWithDonations = new Set(
-    rows
-      .filter((r) => r.status === "confirmed")
-      .map((r) => getMonthKey(r.donation_date))
-  );
-
-  const [{ count: pendingCount }, { data: profile }] = await Promise.all([
-    supabase
-      .from("donations")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .eq("status", "pending"),
-    supabase
-      .from("profiles")
-      .select("salary_encrypted")
-      .eq("id", userId)
-      .single(),
-  ]);
+  const [{ count: pendingCount }, { data: profile }, streak, earnedBadges] =
+    await Promise.all([
+      supabase
+        .from("donations")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("status", "pending"),
+      supabase
+        .from("profiles")
+        .select("salary_encrypted")
+        .eq("id", userId)
+        .single(),
+      getStreak(userId),
+      getEarnedBadgesCount(userId),
+    ]);
 
   const salaryPct = calculateDonationPercentage(
     ytdTotal,
@@ -178,7 +179,10 @@ export const getDashboardSummary = cache(async (): Promise<DashboardSummary> => 
     this_month_total: thisMonthTotal,
     organizations_count: countDistinctOrganizations(ytdRows),
     pending_count: pendingCount ?? 0,
-    streak_months: calculateStreak(monthsWithDonations, now),
+    streak_current: streak.current,
+    streak_longest: streak.longest,
+    earned_badges_count: earnedBadges,
+    total_badges_count: BADGE_IDS.length,
     salary_percentage: salaryPct,
     salary_milestone_target: nextSalaryMilestone(salaryPct),
   };

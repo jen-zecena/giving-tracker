@@ -225,7 +225,10 @@ export interface DashboardSummary {
   this_month_total: number;
   organizations_count: number;
   pending_count: number;
-  streak_months: number;
+  streak_current: number;
+  streak_longest: number;
+  earned_badges_count: number;
+  total_badges_count: number;
   salary_percentage: number | null; // null when salary not set
   salary_milestone_target: number | null;
 }
