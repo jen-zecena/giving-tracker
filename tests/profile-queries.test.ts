@@ -4,7 +4,11 @@
  *
  * Run with: npx tsx tests/profile-queries.test.ts
  */
-import { privacyTierMeta } from "../src/lib/queries/profile";
+import {
+  orderSummariesByIds,
+  type ProfileSummary,
+} from "../src/lib/queries/profile-helpers";
+import { privacyTierMeta } from "../src/lib/privacy-tier";
 import type { PrivacyTier } from "../src/types";
 
 let passed = 0;
@@ -106,6 +110,53 @@ console.log("\ncomputeStats:");
     "org dedupe is case-sensitive",
     stats.organization_count === 2
   );
+}
+
+// ── orderSummariesByIds (DP-047) ────────────────────────────
+console.log("\norderSummariesByIds:");
+
+function summary(id: string): ProfileSummary {
+  return {
+    id,
+    display_name: id,
+    avatar_url: null,
+    bio: null,
+    privacy_tier: "open_giver",
+  };
+}
+
+{
+  const ids = ["a", "b", "c"];
+  const bag = [summary("c"), summary("a"), summary("b")];
+  const ordered = orderSummariesByIds(ids, bag);
+  assert(
+    "preserves caller-provided id order",
+    ordered.map((p) => p.id).join(",") === "a,b,c"
+  );
+}
+
+{
+  // Service-role query can omit a row if the profile is deleted between
+  // the follows query and the profiles fetch. orderSummariesByIds
+  // should silently drop those missing ids rather than crashing or
+  // injecting undefined.
+  const ids = ["a", "missing", "b"];
+  const bag = [summary("a"), summary("b")];
+  const ordered = orderSummariesByIds(ids, bag);
+  assert(
+    "drops ids without a matching summary",
+    ordered.map((p) => p.id).join(",") === "a,b"
+  );
+}
+
+{
+  const ordered = orderSummariesByIds([], [summary("a")]);
+  assert("empty id list → empty result", ordered.length === 0);
+}
+
+{
+  const ordered = orderSummariesByIds(["a"], []);
+  assert("missing summaries → empty result", ordered.length === 0);
 }
 
 // ── Summary ─────────────────────────────────────────────────
