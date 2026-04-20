@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { createClient } from "@/lib/supabase/server";
 import { getBadges } from "@/lib/queries/badges";
 
+import { BadgeCelebration } from "./badge-celebration";
 import { BadgesBoard } from "./badges-board";
 
 export default async function BadgesPage() {
@@ -16,12 +17,14 @@ export default async function BadgesPage() {
 
   const badges = await getBadges();
   const earnedCount = badges.filter((b) => b.earned).length;
+  const earnedBadgeIds = badges.filter((b) => b.earned).map((b) => b.id);
   const totalCount = badges.length;
   const progressPct =
     totalCount > 0 ? Math.round((earnedCount / totalCount) * 100) : 0;
 
   return (
     <>
+      <BadgeCelebration earnedBadgeIds={earnedBadgeIds} />
       <PageHeader title="Milestones" subtitle="Badges earned on your giving journey" />
 
       <div className="mx-auto grid max-w-5xl gap-6 p-4 sm:p-6 lg:p-8">

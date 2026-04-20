@@ -27,6 +27,11 @@ import {
 } from "@/components/ui/select";
 
 import { createDonation } from "@/lib/actions/donations";
+import {
+  celebrateFirstDonation,
+  celebrateMilestone,
+  donationCelebrationKind,
+} from "@/lib/celebrations";
 import type {
   CauseTag,
   DonationScope,
@@ -232,9 +237,14 @@ export function NewDonationForm({ initialOrgs }: NewDonationFormProps) {
         toast.warning(result.error);
       }
 
+      const totalCount = result.data?.total_count ?? 1;
+      const celebrationKind = donationCelebrationKind(totalCount);
+      if (celebrationKind === "first") celebrateFirstDonation();
+      else if (celebrationKind === "milestone") celebrateMilestone();
+
       showCelebrationToast({
         numAmount,
-        totalCount: result.data?.total_count ?? 1,
+        totalCount,
         isRecurringGift: !isQuickMode && isRecurring,
         orgName,
       });
