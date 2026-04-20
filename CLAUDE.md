@@ -70,6 +70,13 @@ GitHub project: "Giving Tracker" (project number 2, owner jen-zecena). Use `gh` 
 - If no reference image: design from scratch using shadcn/ui components and the guardrails below.
 - Screenshot your output with `agent-browser`, compare against reference, fix mismatches, re-screenshot. Do at least 2 comparison rounds.
 
+### Figma Make Source (canonical reference for ports)
+- **Figma Make project:** `Charitable-Donations-Tracker` — https://www.figma.com/make/YLPPnOcPAkDqwZcB4PKwHe/Charitable-Donations-Tracker
+- **File key:** `YLPPnOcPAkDqwZcB4PKwHe`
+- **Pull via MCP (preferred, always current):** call `mcp__figma__get_design_context` with `fileKey: "YLPPnOcPAkDqwZcB4PKwHe"` and `nodeId: "0:1"` to list resources, then `mcp__figma__ReadMcpResourceTool` (server `figma`) with the returned `file://figma/make/source/...` URIs to read individual pages/components/styles. First run in a new session will prompt for Figma OAuth — complete it once and every worktree in the session can read from the project.
+- **Offline mirror (partial):** A local snapshot of frequently referenced pages lives at `~/Projects/giving-tracker-figma-source/` (not checked in). Treat the MCP as canonical — the mirror is only for grep / offline reading, not guaranteed current.
+- **When porting a page:** pull the matching `src/app/pages/*.tsx` via MCP, match its layout/spacing/copy, and map its literal `blue-*`/`purple-*`/`green-*` Tailwind colors onto our theme tokens (`--primary`, `--accent`, `--success`, `--info`, `--metric-*`) per the Design Guardrails below. Don't improve the design — match it.
+
 ### Dev Server & Screenshots
 - Dev server: `npm run dev` (serves at `http://localhost:3000`). Start in background before any screenshots.
 - Use the `agent-browser` skill to screenshot and visually verify pages on localhost. Never screenshot a `file:///` URL.

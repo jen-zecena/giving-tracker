@@ -2,20 +2,18 @@
 
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
-import {
-  CheckCircle2,
-  Info,
-  Plus,
-  Target,
-  Trash2,
-} from "lucide-react";
+import { Check, Plus, Target, Trash2 } from "lucide-react";
 
 import { PageHeader } from "@/components/nav/page-header";
-import { EmptyState } from "@/components/empty-state";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
@@ -60,21 +58,18 @@ import type { Goal, GoalTimeframe, GoalType } from "@/types";
 
 // ── Constants ─────────────────────────────────────────────
 
-const TYPE_OPTIONS: { value: GoalType; label: string; hint: string }[] = [
-  { value: "amount", label: "Total amount", hint: "Reach a dollar target" },
-  { value: "count", label: "Number of donations", hint: "Give N times" },
-  {
-    value: "organizations",
-    label: "Unique organizations",
-    hint: "Support N distinct orgs",
-  },
-  { value: "causes", label: "Unique causes", hint: "Spread giving across causes" },
+// Order mirrors the Figma Make dialog: count first, then amount, orgs, causes.
+const TYPE_OPTIONS: { value: GoalType; label: string }[] = [
+  { value: "count", label: "Number of Donations" },
+  { value: "amount", label: "Total Amount ($)" },
+  { value: "organizations", label: "Different Organizations" },
+  { value: "causes", label: "Different Causes" },
 ];
 
 const TIMEFRAME_OPTIONS: { value: GoalTimeframe; label: string }[] = [
-  { value: "month", label: "This month" },
-  { value: "year", label: "This year" },
-  { value: "ongoing", label: "All time" },
+  { value: "month", label: "This Month" },
+  { value: "year", label: "This Year" },
+  { value: "ongoing", label: "Ongoing" },
 ];
 
 // ── Page ──────────────────────────────────────────────────
@@ -116,7 +111,7 @@ export default function GoalsPage() {
       toast.error(result.error);
       return;
     }
-    toast.success(`Deleted "${deleteTarget.title}"`);
+    toast.success("Goal deleted");
     setDeleteTarget(null);
     startTransition(() => {
       fetchGoals();
@@ -124,54 +119,66 @@ export default function GoalsPage() {
   }
 
   const summary = summarizeGoals(goals);
+  const showSummary = goals.length > 0;
 
   return (
     <>
       <PageHeader
         title="Personal Goals"
-        subtitle="Set targets for your giving and track your progress"
+        subtitle="Set and track your giving journey"
       />
 
-      <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-        <Alert>
-          <Info />
-          <AlertTitle>Goals update automatically</AlertTitle>
-          <AlertDescription>
-            Progress reflects your confirmed donations — no need to update
-            anything by hand. Month/year goals reset on the first of each
-            period.
-          </AlertDescription>
-        </Alert>
+      <div className="p-4 sm:p-6 lg:p-8">
+        <div className="mx-auto max-w-4xl">
+          {/* Info Banner — matches Figma Make gradient card */}
+          <Card className="mb-8 border-[color:var(--info)]/30 bg-gradient-to-r from-[color:var(--metric-blue)] to-[color:var(--metric-purple)]">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-4">
+                <Target
+                  className="mt-1 h-8 w-8 flex-shrink-0 text-[color:var(--info)]"
+                  aria-hidden="true"
+                />
+                <div>
+                  <h3 className="mb-2 text-lg font-semibold text-foreground">
+                    Your Personal Giving Journey
+                  </h3>
+                  <p className="text-foreground/80">
+                    Set meaningful goals that reflect your values and giving
+                    style. These are private and just for you — no pressure,
+                    no competition, just tracking what matters to you.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-sm text-muted-foreground">
-            {loading
-              ? "Loading your goals..."
-              : goals.length === 0
-                ? "Create your first goal to start tracking progress."
-                : `${goals.length} goal${goals.length === 1 ? "" : "s"}`}
-          </p>
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="mr-1.5 h-4 w-4" />
-            New goal
-          </Button>
-        </div>
+          {/* Header row */}
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-foreground">
+                My Goals
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {loading
+                  ? "Loading your goals..."
+                  : `${goals.length} active ${
+                      goals.length === 1 ? "goal" : "goals"
+                    }`}
+              </p>
+            </div>
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Goal
+            </Button>
+          </div>
 
-        {loading ? (
-          <LoadingSkeleton />
-        ) : goals.length === 0 ? (
-          <EmptyState
-            icon={Target}
-            title="No goals yet"
-            description="Set a personal goal to keep your giving intentional — a dollar target, a number of donations, or a spread across causes."
-            action={{
-              label: "Create your first goal",
-              onClick: () => setCreateOpen(true),
-            }}
-          />
-        ) : (
-          <>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {/* Body */}
+          {loading ? (
+            <LoadingSkeleton />
+          ) : goals.length === 0 ? (
+            <EmptyState onCreate={() => setCreateOpen(true)} />
+          ) : (
+            <div className="space-y-4">
               {goals.map((goal) => (
                 <GoalCard
                   key={goal.id}
@@ -180,10 +187,37 @@ export default function GoalsPage() {
                 />
               ))}
             </div>
+          )}
 
-            <SummaryFooter summary={summary} />
-          </>
-        )}
+          {/* Quick Stats footer */}
+          {showSummary && (
+            <Card className="mt-8">
+              <CardHeader>
+                <CardTitle>Your Progress</CardTitle>
+                <CardDescription>Overview of all your goals</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-6">
+                  <SummaryStat
+                    value={summary.completed}
+                    label="Completed"
+                    colorClass="text-[color:var(--info)]"
+                  />
+                  <SummaryStat
+                    value={summary.inProgress}
+                    label="In Progress"
+                    colorClass="text-[color:var(--chart-2)]"
+                  />
+                  <SummaryStat
+                    value={summary.total}
+                    label="Total Goals"
+                    colorClass="text-muted-foreground"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
 
       <CreateGoalDialog
@@ -242,92 +276,126 @@ function GoalCard({ goal, onDelete }: { goal: Goal; onDelete: () => void }) {
           : undefined
       }
     >
-      <CardContent className="space-y-4 p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 space-y-1">
-            <div className="flex items-center gap-2">
-              {complete && (
-                <CheckCircle2
-                  className="h-4 w-4 shrink-0 text-[color:var(--success)]"
-                  aria-label="Goal completed"
-                />
-              )}
-              <h3 className="truncate font-semibold text-foreground">
+      <CardContent className="pt-6">
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="mb-1 flex flex-wrap items-center gap-2">
+              <h3 className="text-lg font-semibold text-foreground">
                 {goal.title}
               </h3>
+              {complete && (
+                <Badge className="bg-[color:var(--success)] text-white hover:bg-[color:var(--success)]/90">
+                  <Check className="mr-1 h-3 w-3" />
+                  Complete
+                </Badge>
+              )}
+              <Badge variant="outline">
+                {GOAL_TIMEFRAME_LABELS[goal.timeframe]}
+              </Badge>
             </div>
             {goal.description && (
-              <p className="text-sm text-muted-foreground">
+              <p className="mb-3 text-sm text-muted-foreground">
                 {goal.description}
               </p>
             )}
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <span>{GOAL_TYPE_LABELS[goal.type]}</span>
+              <span aria-hidden="true">•</span>
+              <span className="font-medium text-foreground font-mono">
+                {formatGoalValue(goal.current, goal.type)} of{" "}
+                {formatGoalValue(goal.target, goal.type)}
+              </span>
+            </div>
           </div>
           <Button
-            variant="ghost"
-            size="icon-sm"
+            variant="outline"
+            size="icon"
             onClick={onDelete}
             aria-label={`Delete goal ${goal.title}`}
-            className="shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+            className="shrink-0"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <Badge variant="secondary">{GOAL_TYPE_LABELS[goal.type]}</Badge>
-          <Badge variant="outline">{GOAL_TIMEFRAME_LABELS[goal.timeframe]}</Badge>
-          {complete && (
-            <Badge className="bg-[color:var(--success)] text-white">
-              Complete
-            </Badge>
-          )}
-        </div>
-
         <div className="space-y-2">
-          <div className="flex items-baseline justify-between text-sm">
-            <span className="font-mono font-medium text-foreground">
-              {formatGoalValue(goal.current, goal.type)}
-            </span>
-            <span className="font-mono text-muted-foreground">
-              of {formatGoalValue(goal.target, goal.type)}
-            </span>
-          </div>
           <Progress value={percent} className="h-2" />
-          <p className="font-mono text-xs text-muted-foreground">
-            {Math.round(percent)}%
-          </p>
+          <div className="flex justify-between text-xs text-muted-foreground font-mono">
+            <span>{Math.round(percent)}% complete</span>
+            {!complete && goal.timeframe !== "ongoing" && (
+              <span>{remainingLabel(goal)}</span>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
   );
+}
+
+function remainingLabel(goal: Goal): string {
+  const remaining = Math.max(goal.target - goal.current, 0);
+  const formatted = formatGoalValue(remaining, goal.type);
+  if (goal.type === "amount") return `${formatted} remaining`;
+  const unit =
+    goal.type === "count"
+      ? remaining === 1
+        ? "donation"
+        : "donations"
+      : goal.type === "organizations"
+        ? remaining === 1
+          ? "organization"
+          : "organizations"
+        : remaining === 1
+          ? "cause"
+          : "causes";
+  return `${formatted} ${unit} remaining`;
 }
 
 // ── Summary Footer ────────────────────────────────────────
 
-function SummaryFooter({
-  summary,
+function SummaryStat({
+  value,
+  label,
+  colorClass,
 }: {
-  summary: { total: number; completed: number; inProgress: number };
+  value: number;
+  label: string;
+  colorClass: string;
 }) {
   return (
-    <Card>
-      <CardContent className="grid grid-cols-3 gap-4 p-5">
-        <SummaryStat label="Completed" value={summary.completed} />
-        <SummaryStat label="In progress" value={summary.inProgress} />
-        <SummaryStat label="Total goals" value={summary.total} />
-      </CardContent>
-    </Card>
+    <div className="text-center">
+      <div
+        className={`text-3xl font-bold font-mono tracking-tight ${colorClass}`}
+      >
+        {value}
+      </div>
+      <div className="mt-1 text-sm text-muted-foreground">{label}</div>
+    </div>
   );
 }
 
-function SummaryStat({ label, value }: { label: string; value: number }) {
+// ── Empty State ───────────────────────────────────────────
+
+function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
-    <div className="text-center">
-      <p className="font-mono text-2xl font-semibold tracking-tight text-foreground">
-        {value}
-      </p>
-      <p className="mt-1 text-xs text-muted-foreground">{label}</p>
-    </div>
+    <Card>
+      <CardContent className="pt-12 pb-12 text-center">
+        <Target
+          className="mx-auto mb-4 h-12 w-12 text-muted-foreground/40"
+          aria-hidden="true"
+        />
+        <h3 className="mb-2 text-lg font-semibold text-foreground">
+          No Goals Yet
+        </h3>
+        <p className="mb-6 text-muted-foreground">
+          Create your first personal goal to start tracking your giving journey
+        </p>
+        <Button onClick={onCreate}>
+          <Plus className="mr-2 h-4 w-4" />
+          Create Your First Goal
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -335,15 +403,17 @@ function SummaryStat({ label, value }: { label: string; value: number }) {
 
 function LoadingSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-      {Array.from({ length: 3 }).map((_, i) => (
+    <div className="space-y-4">
+      {Array.from({ length: 2 }).map((_, i) => (
         <Card key={i}>
-          <CardContent className="space-y-4 p-5">
-            <Skeleton className="h-5 w-40" />
-            <Skeleton className="h-4 w-full" />
-            <div className="flex gap-2">
-              <Skeleton className="h-5 w-20" />
-              <Skeleton className="h-5 w-24" />
+          <CardContent className="pt-6">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-6 w-64" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+              <Skeleton className="h-8 w-8 shrink-0 rounded-md" />
             </div>
             <Skeleton className="h-2 w-full" />
           </CardContent>
@@ -366,7 +436,7 @@ function CreateGoalDialog({
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [type, setType] = useState<GoalType>("amount");
+  const [type, setType] = useState<GoalType>("count");
   const [target, setTarget] = useState("");
   const [timeframe, setTimeframe] = useState<GoalTimeframe>("year");
   const [submitting, setSubmitting] = useState(false);
@@ -374,7 +444,7 @@ function CreateGoalDialog({
   function reset() {
     setTitle("");
     setDescription("");
-    setType("amount");
+    setType("count");
     setTarget("");
     setTimeframe("year");
   }
@@ -382,8 +452,8 @@ function CreateGoalDialog({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const parsedTarget = Number(target);
-    if (!Number.isFinite(parsedTarget) || parsedTarget <= 0) {
-      toast.error("Target must be greater than zero.");
+    if (!title.trim() || !Number.isFinite(parsedTarget) || parsedTarget <= 0) {
+      toast.error("Please fill in all required fields");
       return;
     }
 
@@ -401,7 +471,7 @@ function CreateGoalDialog({
       toast.error(result.error);
       return;
     }
-    toast.success("Goal created");
+    toast.success("Goal created!");
     reset();
     onCreated();
   }
@@ -414,23 +484,23 @@ function CreateGoalDialog({
         if (!next) reset();
       }}
     >
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-[500px]">
         <form onSubmit={handleSubmit} className="space-y-4">
           <DialogHeader>
-            <DialogTitle>New personal goal</DialogTitle>
+            <DialogTitle>Create a New Goal</DialogTitle>
             <DialogDescription>
-              Pick a type and a target — progress updates from your confirmed
-              donations.
+              Set a personal goal for your giving journey. This is private and
+              just for you.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-2">
-            <Label htmlFor="goal-title">Title</Label>
+            <Label htmlFor="goal-title">Goal Title *</Label>
             <Input
               id="goal-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Give $1,000 this year"
+              placeholder="e.g., Support local charities"
               maxLength={80}
               required
               autoFocus
@@ -443,24 +513,26 @@ function CreateGoalDialog({
               id="goal-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Why this goal matters to you"
+              placeholder="Why is this goal meaningful to you?"
               maxLength={280}
               rows={2}
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="goal-type">Type</Label>
+              <Label htmlFor="goal-type">Goal Type *</Label>
               <Select
                 value={type}
-                onValueChange={(v) => setType((v ?? "amount") as GoalType)}
+                onValueChange={(v) => setType((v ?? "count") as GoalType)}
               >
                 <SelectTrigger id="goal-type" className="w-full">
                   <SelectValue>
-                    {(v: string | null) =>
-                      v ? GOAL_TYPE_LABELS[v as GoalType] : null
-                    }
+                    {(v: string | null) => {
+                      if (!v) return null;
+                      const opt = TYPE_OPTIONS.find((o) => o.value === v);
+                      return opt?.label ?? null;
+                    }}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -474,46 +546,44 @@ function CreateGoalDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="goal-timeframe">Timeframe</Label>
-              <Select
-                value={timeframe}
-                onValueChange={(v) =>
-                  setTimeframe((v ?? "year") as GoalTimeframe)
-                }
-              >
-                <SelectTrigger id="goal-timeframe" className="w-full">
-                  <SelectValue>
-                    {(v: string | null) =>
-                      v ? GOAL_TIMEFRAME_LABELS[v as GoalTimeframe] : null
-                    }
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {TIMEFRAME_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="goal-target">Target *</Label>
+              <Input
+                id="goal-target"
+                type="number"
+                inputMode="decimal"
+                min="1"
+                step="1"
+                value={target}
+                onChange={(e) => setTarget(e.target.value)}
+                placeholder="e.g., 10"
+                required
+              />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="goal-target">
-              Target {type === "amount" ? "(USD)" : ""}
-            </Label>
-            <Input
-              id="goal-target"
-              type="number"
-              inputMode="decimal"
-              min={type === "amount" ? "1" : "1"}
-              step={type === "amount" ? "1" : "1"}
-              value={target}
-              onChange={(e) => setTarget(e.target.value)}
-              placeholder={type === "amount" ? "1000" : "5"}
-              required
-            />
+            <Label htmlFor="goal-timeframe">Timeframe *</Label>
+            <Select
+              value={timeframe}
+              onValueChange={(v) =>
+                setTimeframe((v ?? "year") as GoalTimeframe)
+              }
+            >
+              <SelectTrigger id="goal-timeframe" className="w-full">
+                <SelectValue>
+                  {(v: string | null) =>
+                    v ? GOAL_TIMEFRAME_LABELS[v as GoalTimeframe] : null
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {TIMEFRAME_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <DialogFooter>
@@ -526,7 +596,7 @@ function CreateGoalDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Creating..." : "Create goal"}
+              {submitting ? "Creating..." : "Create Goal"}
             </Button>
           </DialogFooter>
         </form>

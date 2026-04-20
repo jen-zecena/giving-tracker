@@ -8,17 +8,20 @@ import type { Goal, GoalTimeframe, GoalType } from "@/types";
 
 // ── Labels ────────────────────────────────────────────────
 
+// Labels match the Figma Make source (`src/app/pages/Goals.tsx`,
+// `getGoalTypeLabel` / `getTimeframeLabel`) so the dialog and cards read
+// identically to the reference.
 export const GOAL_TYPE_LABELS: Record<GoalType, string> = {
-  amount: "Amount",
-  count: "Donations",
-  organizations: "Organizations",
-  causes: "Causes",
+  amount: "Total Amount",
+  count: "Number of Donations",
+  organizations: "Different Organizations",
+  causes: "Different Causes",
 };
 
 export const GOAL_TIMEFRAME_LABELS: Record<GoalTimeframe, string> = {
-  month: "This month",
-  year: "This year",
-  ongoing: "All time",
+  month: "This Month",
+  year: "This Year",
+  ongoing: "Ongoing",
 };
 
 // ── Per-type value formatting ─────────────────────────────
