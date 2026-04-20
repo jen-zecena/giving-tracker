@@ -267,6 +267,27 @@ console.log("\ncountDistinctOrganizations:");
   );
 }
 
+// ── EMPTY_DASHBOARD_DATA shape (DP-035 contract) ──────────
+console.log("\nEMPTY_DASHBOARD_DATA (DP-035 shape):");
+
+{
+  // `require` avoids pulling `next/headers` at module evaluation under tsx.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const dashboard = require("../src/lib/queries/dashboard");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const badges = require("../src/lib/queries/badges");
+
+  const summary = dashboard.EMPTY_DASHBOARD_DATA.summary;
+  eq("streak_current is 0", summary.streak_current, 0);
+  eq("streak_longest is 0", summary.streak_longest, 0);
+  eq("earned_badges_count is 0", summary.earned_badges_count, 0);
+  eq(
+    "total_badges_count matches BADGE_IDS length",
+    summary.total_badges_count,
+    badges.BADGE_IDS.length
+  );
+}
+
 // ── Summary ───────────────────────────────────────────────
 console.log(`\n${"─".repeat(40)}`);
 console.log(`Results: ${passed} passed, ${failed} failed`);

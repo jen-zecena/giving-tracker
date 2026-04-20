@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import {
+  Award,
   Heart,
   TrendingUp,
   TrendingDown,
@@ -75,7 +76,7 @@ export default async function DashboardPage() {
               ytdTotal={data.summary.ytd_total}
               organizationsCount={data.summary.organizations_count}
               thisMonthTotal={data.summary.this_month_total}
-              streakMonths={data.summary.streak_months}
+              streakMonths={data.summary.streak_current}
             />
 
             {/* Charts + Sidebar */}
@@ -96,7 +97,11 @@ export default async function DashboardPage() {
               {/* Right Sidebar */}
               <div className="space-y-6">
                 <InsightsCard />
-                <MoMCard mom={data.mom} />
+                <MoMCard
+                  mom={data.mom}
+                  earnedBadges={data.summary.earned_badges_count}
+                  totalBadges={data.summary.total_badges_count}
+                />
                 <RecentActivityCard donations={data.recent} />
               </div>
             </div>
@@ -151,7 +156,15 @@ function CauseBreakdownCard({
 
 // ── MoM Comparison ────────────────────────────────────────
 
-function MoMCard({ mom }: { mom: MoMComparison }) {
+function MoMCard({
+  mom,
+  earnedBadges,
+  totalBadges,
+}: {
+  mom: MoMComparison;
+  earnedBadges: number;
+  totalBadges: number;
+}) {
   const trend =
     mom.percentage_change === null
       ? "neutral"
@@ -194,6 +207,14 @@ function MoMCard({ mom }: { mom: MoMComparison }) {
           <p className="text-lg font-medium font-mono">
             {formatCurrency(mom.previous_month_total)}
           </p>
+        </div>
+        <div className="flex items-center gap-2 border-t border-primary/10 pt-3">
+          <Award className="h-4 w-4 text-primary" aria-hidden />
+          <span className="text-sm text-muted-foreground">Badges earned</span>
+          <span className="ml-auto text-sm font-mono font-medium text-foreground">
+            {earnedBadges}
+            <span className="text-muted-foreground">/{totalBadges}</span>
+          </span>
         </div>
       </CardContent>
     </Card>
