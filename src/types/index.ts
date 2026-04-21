@@ -67,6 +67,7 @@ export interface Profile {
   show_amounts_to_friends: boolean;
   show_percentage_publicly: boolean;
   email_notifications: boolean;
+  welcome_email_sent_at: string | null;
   created_at: string;
   updated_at: string;
 }
