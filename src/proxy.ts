@@ -48,8 +48,13 @@ export async function proxy(request: NextRequest) {
     (route) => pathname === route || pathname.startsWith(route + "/")
   );
 
+  // Cron entrypoints authenticate via the CRON_SECRET header, not a user
+  // session. The route handler itself enforces the check (DP-051) — we
+  // just need to let the request pass through without a /login redirect.
+  const isCronRoute = pathname.startsWith("/api/cron/");
+
   // Redirect unauthenticated users to /login for protected routes
-  if (!user && !isPublicRoute) {
+  if (!user && !isPublicRoute && !isCronRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
