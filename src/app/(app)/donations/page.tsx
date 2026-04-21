@@ -15,6 +15,9 @@ import {
   DollarSign,
   RefreshCw,
   HeartHandshake,
+  Check,
+  X as XIcon,
+  Clock,
 } from "lucide-react";
 
 import { EmptyState } from "@/components/empty-state";
@@ -47,7 +50,9 @@ import {
   getDonations,
   getDonationsSummary,
   deleteDonation,
+  confirmDonation,
 } from "@/lib/actions/donations";
+import { usePendingDonations } from "@/components/nav/pending-donations-context";
 import type { Donation, CauseTag } from "@/types";
 
 // ── Constants ─────────────────────────────────────────────
@@ -123,6 +128,7 @@ export default function DonationsPage() {
 
   // Data state
   const [donations, setDonations] = useState<Donation[]>([]);
+  const [pendingDonations, setPendingDonations] = useState<Donation[]>([]);
   const [total, setTotal] = useState(0);
   const [summary, setSummary] = useState({
     count: 0,
@@ -131,11 +137,15 @@ export default function DonationsPage() {
   });
   const [loading, setLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
+  const { refresh: refreshPendingBadge } = usePendingDonations();
 
   // Delete state
   const [deleteTarget, setDeleteTarget] = useState<Donation | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Pending confirm/skip state (disables buttons on the row being acted on)
+  const [actingOnId, setActingOnId] = useState<string | null>(null);
 
   // ── Sync filters to URL ───────────────────────────────
 
@@ -156,16 +166,22 @@ export default function DonationsPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [donationsResult, summaryResult] = await Promise.all([
+      const [donationsResult, summaryResult, pendingResult] = await Promise.all([
         getDonations({
           search: debouncedSearch || undefined,
           causeTag: (causeFilter as CauseTag) || undefined,
           dateFrom: yearFilter ? `${yearFilter}-01-01` : undefined,
           dateTo: yearFilter ? `${yearFilter}-12-31` : undefined,
           sortBy: sortBy as "newest" | "oldest" | "highest" | "lowest",
+          // Main list shows confirmed donations only; pending rows render in
+          // their own section at the top and skipped rows are deleted outright.
+          status: "confirmed",
           pageSize: 100,
         }),
         getDonationsSummary(),
+        // Always load the full pending set, ignoring filters — pending
+        // donations need user action regardless of what the list is filtered to.
+        getDonations({ status: "pending", sortBy: "newest", pageSize: 100 }),
       ]);
 
       if (donationsResult.data) {
@@ -174,6 +190,9 @@ export default function DonationsPage() {
       }
       if (summaryResult.data) {
         setSummary(summaryResult.data);
+      }
+      if (pendingResult.data) {
+        setPendingDonations(pendingResult.data.items);
       }
     } finally {
       setLoading(false);
@@ -228,6 +247,40 @@ export default function DonationsPage() {
       });
     }
     setDeleteTarget(null);
+  }
+
+  // ── Confirm / Skip handlers ───────────────────────────
+
+  async function handleConfirm(donation: Donation) {
+    setActingOnId(donation.id);
+    const result = await confirmDonation(donation.id);
+    setActingOnId(null);
+
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success(`Confirmed donation to ${donation.organization_name}`);
+    await refreshPendingBadge();
+    startTransition(() => {
+      fetchData();
+    });
+  }
+
+  async function handleSkip(donation: Donation) {
+    setActingOnId(donation.id);
+    const result = await deleteDonation(donation.id);
+    setActingOnId(null);
+
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success(`Skipped donation to ${donation.organization_name}`);
+    await refreshPendingBadge();
+    startTransition(() => {
+      fetchData();
+    });
   }
 
   // ── CSV Export ────────────────────────────────────────
@@ -386,6 +439,33 @@ export default function DonationsPage() {
           </Button>
         </div>
 
+        {/* Pending section — always at the top when there are pending rows */}
+        {!loading && pendingDonations.length > 0 && (
+          <section id="pending" className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-warning" aria-hidden />
+              <h2 className="text-base font-semibold text-foreground">
+                Pending ({pendingDonations.length})
+              </h2>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Confirm or skip these recurring donations. They won&apos;t count
+              toward your totals until you confirm.
+            </p>
+            <div className="space-y-3">
+              {pendingDonations.map((donation) => (
+                <PendingDonationRow
+                  key={donation.id}
+                  donation={donation}
+                  busy={actingOnId === donation.id}
+                  onConfirm={() => handleConfirm(donation)}
+                  onSkip={() => handleSkip(donation)}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Donation List */}
         {loading ? (
           <LoadingSkeleton />
@@ -396,7 +476,7 @@ export default function DonationsPage() {
               title="No matching donations"
               description="Try adjusting your search or filters to find what you're looking for."
             />
-          ) : (
+          ) : pendingDonations.length > 0 ? null : (
             <EmptyState
               icon={HeartHandshake}
               title="No donations yet"
@@ -561,6 +641,74 @@ function DonationRow({
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Pending Donation Row ──────────────────────────────────
+
+function PendingDonationRow({
+  donation,
+  busy,
+  onConfirm,
+  onSkip,
+}: {
+  donation: Donation;
+  busy: boolean;
+  onConfirm: () => void;
+  onSkip: () => void;
+}) {
+  return (
+    <Card className="border-warning/30 bg-warning/5">
+      <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
+        <div className="flex-1 min-w-0 space-y-1.5">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-medium text-foreground truncate">
+              {donation.organization_name}
+            </span>
+            <Badge variant="secondary" className="gap-1 bg-warning/10 text-warning">
+              <Clock className="h-3 w-3" />
+              Pending
+            </Badge>
+            {donation.is_recurring && (
+              <Badge variant="secondary" className="gap-1">
+                <RefreshCw className="h-3 w-3" />
+                Recurring
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <span className="font-mono">
+              {format(new Date(donation.donation_date + "T00:00:00"), "MMM d, yyyy")}
+            </span>
+            <span className="font-mono tabular-nums text-foreground font-semibold">
+              {formatCurrency(Number(donation.amount))}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onSkip}
+            disabled={busy}
+            aria-label={`Skip pending donation to ${donation.organization_name}`}
+          >
+            <XIcon className="h-4 w-4 mr-1" />
+            Skip
+          </Button>
+          <Button
+            size="sm"
+            onClick={onConfirm}
+            disabled={busy}
+            aria-label={`Confirm pending donation to ${donation.organization_name}`}
+          >
+            <Check className="h-4 w-4 mr-1" />
+            {busy ? "Saving..." : "Confirm"}
+          </Button>
         </div>
       </CardContent>
     </Card>
