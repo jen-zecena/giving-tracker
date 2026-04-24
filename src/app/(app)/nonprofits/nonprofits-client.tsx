@@ -167,46 +167,50 @@ export function NonprofitsClient({ initial }: Props) {
 
 function NonprofitCard({ nonprofit }: { nonprofit: Nonprofit }) {
   return (
-    <Card className="transition-shadow hover:shadow-md">
-      <CardContent className="pt-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start">
-          {/* Logo */}
+    <Card className="overflow-hidden transition-shadow hover:shadow-md">
+      {/* Cover banner */}
+      <CoverBanner
+        src={nonprofit.cover_image_url}
+        alt={`${nonprofit.name} cover image`}
+      />
+
+      <CardContent className="relative pt-0">
+        {/* Logo overlapping the banner */}
+        <div className="-mt-8 mb-3 flex items-end">
           <NonprofitLogo
             src={nonprofit.logo_url}
             alt={`${nonprofit.name} logo`}
           />
+        </div>
 
+        <div className="flex flex-col gap-4 md:flex-row md:items-start">
           {/* Content */}
           <div className="min-w-0 flex-1">
-            <div className="mb-2 flex flex-wrap items-start justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                <div className="mb-1 flex flex-wrap items-center gap-2">
-                  <h3 className="text-xl font-bold text-foreground">
-                    <Link
-                      href={`/nonprofits/${nonprofit.id}`}
-                      className="hover:underline focus-visible:underline focus-visible:outline-none"
-                    >
-                      {nonprofit.name}
-                    </Link>
-                  </h3>
-                  {nonprofit.verified && (
-                    <Badge className="bg-success text-primary-foreground hover:bg-success/90">
-                      <CheckCircle2 className="mr-1 h-3 w-3" />
-                      Verified
-                    </Badge>
-                  )}
-                </div>
-                <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-                  {nonprofit.location && (
-                    <>
-                      <MapPin className="h-4 w-4" />
-                      <span>{nonprofit.location}</span>
-                      <span aria-hidden="true">•</span>
-                    </>
-                  )}
-                  <span className="font-mono">EIN: {nonprofit.ein}</span>
-                </div>
-              </div>
+            <div className="mb-1 flex flex-wrap items-center gap-2">
+              <h3 className="text-xl font-bold text-foreground">
+                <Link
+                  href={`/nonprofits/${nonprofit.id}`}
+                  className="hover:underline focus-visible:underline focus-visible:outline-none"
+                >
+                  {nonprofit.name}
+                </Link>
+              </h3>
+              {nonprofit.verified && (
+                <Badge className="bg-success text-primary-foreground hover:bg-success/90">
+                  <CheckCircle2 className="mr-1 h-3 w-3" />
+                  Verified
+                </Badge>
+              )}
+            </div>
+            <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+              {nonprofit.location && (
+                <>
+                  <MapPin className="h-4 w-4" />
+                  <span>{nonprofit.location}</span>
+                  <span aria-hidden="true">•</span>
+                </>
+              )}
+              <span className="font-mono">EIN: {nonprofit.ein}</span>
             </div>
 
             {nonprofit.mission && (
@@ -216,7 +220,7 @@ function NonprofitCard({ nonprofit }: { nonprofit: Nonprofit }) {
             )}
 
             {nonprofit.category.length > 0 && (
-              <div className="mb-3 flex flex-wrap items-center gap-2">
+              <div className="mb-1 flex flex-wrap items-center gap-2">
                 {nonprofit.category.slice(0, 3).map((cat) => (
                   <Badge key={cat} variant="outline">
                     {cat}
@@ -236,7 +240,7 @@ function NonprofitCard({ nonprofit }: { nonprofit: Nonprofit }) {
             <Button
               variant="outline"
               size="sm"
-              className="shrink-0"
+              className="shrink-0 self-start"
               render={
                 <a
                   href={nonprofit.donation_url}
@@ -255,6 +259,30 @@ function NonprofitCard({ nonprofit }: { nonprofit: Nonprofit }) {
   );
 }
 
+function CoverBanner({ src, alt }: { src: string | null; alt: string }) {
+  // Cloudinary URLs occasionally 404 if Every.org clears an image; we
+  // render the gradient surface in that case via onError.
+  const [errored, setErrored] = useState(false);
+  if (!src || errored) {
+    return (
+      <div
+        className="h-32 w-full bg-gradient-to-br from-primary/20 via-chart-3/20 to-success/20"
+        aria-hidden="true"
+      />
+    );
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={alt}
+      className="h-32 w-full object-cover"
+      onError={() => setErrored(true)}
+      loading="lazy"
+    />
+  );
+}
+
 function NonprofitLogo({
   src,
   alt,
@@ -263,12 +291,16 @@ function NonprofitLogo({
   alt: string;
 }) {
   // Cloudinary URLs occasionally 404 if Every.org clears an image; we
-  // render the icon fallback in that case via onError.
+  // render the icon fallback in that case via onError. The 4-px ring
+  // matches the card surface so the badge floats over the banner like
+  // an avatar.
+  const ringClasses =
+    "shrink-0 rounded-lg ring-4 ring-card shadow-sm bg-card";
   const [errored, setErrored] = useState(false);
   if (!src || errored) {
     return (
       <div
-        className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-chart-3"
+        className={`flex h-16 w-16 items-center justify-center bg-gradient-to-br from-primary to-chart-3 ${ringClasses}`}
         aria-hidden="true"
       >
         <Building2 className="h-8 w-8 text-primary-foreground" />
@@ -285,7 +317,7 @@ function NonprofitLogo({
       alt={alt}
       width={64}
       height={64}
-      className="h-16 w-16 shrink-0 rounded-lg border border-border object-cover"
+      className={`h-16 w-16 object-cover ${ringClasses}`}
       onError={() => setErrored(true)}
       loading="lazy"
     />

@@ -91,14 +91,20 @@ export default async function NonprofitDetailPage({
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Organization Header */}
-        <Card className="mb-8">
-          <CardContent className="pt-8">
-            <div className="flex items-start gap-6">
+        <Card className="mb-8 overflow-hidden">
+          <DetailCoverBanner
+            src={nonprofit.cover_image_url}
+            alt={`${nonprofit.name} cover image`}
+          />
+          <CardContent className="relative pt-0">
+            <div className="-mt-12 mb-4 flex items-end">
               <DetailLogo
                 src={nonprofit.logo_url}
                 alt={`${nonprofit.name} logo`}
               />
+            </div>
 
+            <div className="flex flex-col items-start gap-6 md:flex-row">
               <div className="flex-1">
                 <div className="mb-4 flex items-start justify-between gap-4">
                   <div>
@@ -518,10 +524,14 @@ export default async function NonprofitDetailPage({
 }
 
 function DetailLogo({ src, alt }: { src: string | null; alt: string }) {
+  // 4-px ring matches the card surface so the badge floats over the
+  // banner like an avatar.
+  const ringClasses =
+    "flex-shrink-0 rounded-lg ring-4 ring-card shadow-md bg-card";
   if (!src) {
     return (
       <div
-        className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-success"
+        className={`flex h-24 w-24 items-center justify-center bg-gradient-to-br from-primary to-success ${ringClasses}`}
         aria-hidden="true"
       >
         <Building2 className="h-12 w-12 text-primary-foreground" />
@@ -538,7 +548,28 @@ function DetailLogo({ src, alt }: { src: string | null; alt: string }) {
       alt={alt}
       width={96}
       height={96}
-      className="h-24 w-24 flex-shrink-0 rounded-lg border border-border object-cover"
+      className={`h-24 w-24 object-cover ${ringClasses}`}
     />
+  );
+}
+
+function DetailCoverBanner({
+  src,
+  alt,
+}: {
+  src: string | null;
+  alt: string;
+}) {
+  if (!src) {
+    return (
+      <div
+        className="h-48 w-full bg-gradient-to-br from-primary/20 via-chart-3/20 to-success/20"
+        aria-hidden="true"
+      />
+    );
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt={alt} className="h-48 w-full object-cover" />
   );
 }

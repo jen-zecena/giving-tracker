@@ -21,6 +21,7 @@ export type NonprofitDbInsert = {
   donation_url: string | null;
   verified: boolean;
   logo_url: string | null;
+  cover_image_url: string | null;
   description: string | null;
   tags: string[];
   synced_at: string;
@@ -48,6 +49,7 @@ export function mapEveryOrgToDbInsert(
     donation_url: emptyToNull(n.donationUrl),
     verified: n.verified,
     logo_url: n.logoUrl ?? null,
+    cover_image_url: n.coverImageUrl ?? null,
     description: emptyToNull(n.description),
     tags: n.tags,
     synced_at: new Date().toISOString(),

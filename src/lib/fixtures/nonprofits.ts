@@ -50,6 +50,8 @@ export type Nonprofit = {
   donationUrl: string;
   /** Square logo URL ready to render in an `<img>`. Null when the source has none. */
   logoUrl?: string | null;
+  /** Wide cover/banner URL (~16:9). Used as the card hero when present. */
+  coverImageUrl?: string | null;
   verified: boolean;
   verificationDate?: string;
   flagged: boolean;

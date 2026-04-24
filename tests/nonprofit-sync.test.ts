@@ -15,7 +15,11 @@
  * the manual checklist in the PR description.
  */
 
-import { pickLogoUrl } from "../src/lib/every-org";
+import {
+  buildEveryOrgImageUrl,
+  pickCoverUrl,
+  pickLogoUrl,
+} from "../src/lib/every-org";
 import {
   formatLocation,
   mapEveryOrgToDbInsert,
@@ -53,6 +57,7 @@ function np(overrides: Partial<Nonprofit> = {}): Nonprofit {
     website: "https://example.org",
     donationUrl: "https://every.org/test-org",
     logoUrl: "https://res.cloudinary.com/everydotorg/image/upload/abc123",
+    coverImageUrl: "https://res.cloudinary.com/everydotorg/image/upload/cover_xyz",
     verified: true,
     flagged: false,
     flagCount: 0,
@@ -91,6 +96,52 @@ console.log("pickLogoUrl");
   assert(
     "treats whitespace-only cloudinary id as missing",
     pickLogoUrl(undefined, "   ") === null
+  );
+}
+
+console.log("\npickCoverUrl");
+{
+  {
+    const got = pickCoverUrl(undefined, "cover_abc");
+    assert(
+      "builds a 16:9 Cloudinary URL from id (different transform than logo)",
+      typeof got === "string" &&
+        got.includes("ar_16:9") &&
+        got.includes("w_640") &&
+        got.endsWith("cover_abc")
+    );
+  }
+  {
+    const got = pickLogoUrl(undefined, "logo_abc");
+    assert(
+      "logo URL still uses square transform (no regression)",
+      typeof got === "string" && got.includes("ar_1:1") && got.endsWith("logo_abc")
+    );
+  }
+  assert(
+    "explicit cover URL wins over cloudinary id",
+    pickCoverUrl("https://cdn.example/cover.jpg", "cover_abc") ===
+      "https://cdn.example/cover.jpg"
+  );
+  assert("returns null when both inputs missing", pickCoverUrl(undefined, undefined) === null);
+}
+
+console.log("\nbuildEveryOrgImageUrl");
+{
+  // The generic builder is what `pickLogoUrl` and `pickCoverUrl`
+  // delegate to. Pin its kind switching so a future "thumbnail" preset
+  // can be added without rewiring the call sites.
+  assert(
+    "kind=logo produces square crop",
+    buildEveryOrgImageUrl(undefined, "x", "logo")?.includes("ar_1:1") === true
+  );
+  assert(
+    "kind=cover produces 16:9 crop",
+    buildEveryOrgImageUrl(undefined, "x", "cover")?.includes("ar_16:9") === true
+  );
+  assert(
+    "kind=cover prefers explicit URL too",
+    buildEveryOrgImageUrl("https://x/y.png", "x", "cover") === "https://x/y.png"
   );
 }
 
@@ -150,6 +201,11 @@ console.log("\nmapEveryOrgToDbInsert");
     row.logo_url,
     "https://res.cloudinary.com/everydotorg/image/upload/abc123"
   );
+  eq(
+    "coverImageUrl maps to cover_image_url",
+    row.cover_image_url,
+    "https://res.cloudinary.com/everydotorg/image/upload/cover_xyz"
+  );
   eq("description passes through", row.description, "A description");
 
   const stamp = Date.parse(row.synced_at);
@@ -175,6 +231,12 @@ console.log("\nmapEveryOrgToDbInsert");
   // Missing logoUrl on the input → null (renderer falls back to icon).
   const row = mapEveryOrgToDbInsert(np({ logoUrl: undefined }));
   eq("missing logoUrl → null", row.logo_url, null);
+}
+
+{
+  // Missing coverImageUrl → null (renderer falls back to gradient).
+  const row = mapEveryOrgToDbInsert(np({ coverImageUrl: undefined }));
+  eq("missing coverImageUrl → null", row.cover_image_url, null);
 }
 
 {
