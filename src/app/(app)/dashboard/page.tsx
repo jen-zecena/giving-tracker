@@ -7,6 +7,7 @@ import {
   TrendingDown,
   Minus,
   ArrowRight,
+  Clock,
 } from "lucide-react";
 
 import { InsightsCard } from "@/components/insights-card";
@@ -71,6 +72,10 @@ export default async function DashboardPage() {
           <div className="space-y-6">
             <WelcomeChecklist status={checklistStatus} />
 
+            {data.summary.pending_count > 0 && (
+              <PendingDonationsBanner count={data.summary.pending_count} />
+            )}
+
             {/* Metric Cards */}
             <MetricCards
               ytdTotal={data.summary.ytd_total}
@@ -109,6 +114,38 @@ export default async function DashboardPage() {
         )}
       </div>
     </>
+  );
+}
+
+// ── Pending Donations Banner ──────────────────────────────
+
+function PendingDonationsBanner({ count }: { count: number }) {
+  return (
+    <Card className="border-warning/30 bg-warning/10">
+      <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="rounded-full bg-warning/20 p-2">
+            <Clock className="h-5 w-5 text-warning" aria-hidden />
+          </div>
+          <div>
+            <p className="font-medium text-foreground">
+              You have {count} pending donation{count === 1 ? "" : "s"} to confirm
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Recurring donations wait for your confirmation before they count toward your totals.
+            </p>
+          </div>
+        </div>
+        <Button
+          size="sm"
+          render={<Link href="/donations#pending" />}
+          className="shrink-0"
+        >
+          Review
+          <ArrowRight className="h-3 w-3 ml-1" />
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 

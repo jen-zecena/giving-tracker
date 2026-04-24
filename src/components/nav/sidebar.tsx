@@ -19,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { usePendingDonations } from "@/components/nav/pending-donations-context";
 import { cn } from "@/lib/utils";
 
 const menuItems = [
@@ -49,6 +50,7 @@ function isActive(pathname: string, href: string) {
 export function Sidebar() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { pendingCount } = usePendingDonations();
 
   const handleNavigation = () => {
     setIsMobileMenuOpen(false);
@@ -139,6 +141,7 @@ export function Sidebar() {
             {menuItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(pathname, item.href);
+              const showBadge = item.href === "/donations" && pendingCount > 0;
 
               return (
                 <Link
@@ -156,6 +159,19 @@ export function Sidebar() {
                 >
                   <Icon className="w-5 h-5" />
                   <span>{item.label}</span>
+                  {showBadge && (
+                    <span
+                      className={cn(
+                        "ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold tabular-nums font-mono",
+                        active
+                          ? "bg-primary-foreground text-primary"
+                          : "bg-destructive text-destructive-foreground"
+                      )}
+                      aria-label={`${pendingCount} pending donation${pendingCount === 1 ? "" : "s"}`}
+                    >
+                      {pendingCount}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -188,6 +204,7 @@ export function Sidebar() {
           {bottomNavItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(pathname, item.href);
+            const showBadge = item.href === "/donations" && pendingCount > 0;
 
             return (
               <Link
@@ -200,15 +217,29 @@ export function Sidebar() {
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 )}
-                aria-label={item.label}
+                aria-label={
+                  showBadge
+                    ? `${item.label} (${pendingCount} pending)`
+                    : item.label
+                }
                 aria-current={active ? "page" : undefined}
               >
-                <Icon
-                  className={cn(
-                    "w-6 h-6",
-                    active ? "stroke-[2.5]" : "stroke-2"
+                <div className="relative">
+                  <Icon
+                    className={cn(
+                      "w-6 h-6",
+                      active ? "stroke-[2.5]" : "stroke-2"
+                    )}
+                  />
+                  {showBadge && (
+                    <span
+                      className="absolute -top-1 -right-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold tabular-nums font-mono text-destructive-foreground"
+                      aria-hidden="true"
+                    >
+                      {pendingCount}
+                    </span>
                   )}
-                />
+                </div>
                 <span
                   className={cn(
                     "text-xs",

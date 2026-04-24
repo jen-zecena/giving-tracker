@@ -399,6 +399,55 @@ export async function updateDonation(
   return {};
 }
 
+// ── Confirm / Skip (pending recurring donations) ──────────
+
+export async function confirmDonation(id: string): Promise<ActionResult> {
+  const { supabase, user } = await getAuthenticatedUser();
+  if (!supabase || !user) {
+    return { error: "You must be signed in to confirm a donation." };
+  }
+
+  const { data: updated, error } = await supabase
+    .from("donations")
+    .update({ status: "confirmed" satisfies DonationStatus })
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .eq("status", "pending")
+    .select("id");
+
+  if (error) {
+    return { error: `Failed to confirm donation: ${error.message}` };
+  }
+
+  if (!updated || updated.length === 0) {
+    return { error: "Pending donation not found." };
+  }
+
+  invalidateDashboard(user.id);
+  return {};
+}
+
+// ── Pending count (for sidebar badge / banner) ────────────
+
+export async function getPendingDonationsCount(): Promise<ActionResult<number>> {
+  const { supabase, user } = await getAuthenticatedUser();
+  if (!supabase || !user) {
+    return { data: 0 };
+  }
+
+  const { count, error } = await supabase
+    .from("donations")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .eq("status", "pending");
+
+  if (error) {
+    return { error: `Failed to fetch pending count: ${error.message}` };
+  }
+
+  return { data: count ?? 0 };
+}
+
 // ── Delete ─────────────────────────────────────────────────
 
 export async function deleteDonation(id: string): Promise<ActionResult> {
