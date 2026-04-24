@@ -9,6 +9,7 @@
  */
 
 import { advanceDueDate } from "@/lib/recurring-helpers";
+import type { PendingDonationInput } from "@/lib/notifications/builders";
 import type { RecurringFrequency } from "@/types";
 
 /**
@@ -142,4 +143,20 @@ function constantTimeEqual(a: string, b: string): boolean {
  */
 export function utcTodayIso(): string {
   return new Date().toISOString().split("T")[0];
+}
+
+/**
+ * DP-056 — maps a unit of pending work to the input the
+ * `notifyPendingDonation` helper expects. Kept here (not in the route)
+ * so the PendingWork → notification contract is unit-testable.
+ */
+export function buildPendingDonationNotifyInput(
+  work: PendingWork
+): PendingDonationInput {
+  return {
+    userId: work.userId,
+    organizationName: work.donation.organization_name,
+    scheduleId: work.scheduleId,
+    dueDate: work.fromDueDate,
+  };
 }

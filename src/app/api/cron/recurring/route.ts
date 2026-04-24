@@ -24,11 +24,13 @@ import { NextResponse } from "next/server";
 
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import {
+  buildPendingDonationNotifyInput,
   isAuthorizedCronRequest,
   planPendingWork,
   utcTodayIso,
   type ScheduleForProcessing,
 } from "@/lib/cron/recurring-processor";
+import { notifyPendingDonation } from "@/lib/notifications";
 
 // Run on the Node runtime — we use the service-role Supabase client,
 // which pulls in `@supabase/supabase-js`.
@@ -43,8 +45,10 @@ type ScheduleOutcome = {
   inserted: boolean;
   advanced: boolean;
   advanceTo: string;
+  notified: boolean;
   insertError?: string;
   advanceError?: string;
+  notifyError?: string;
 };
 
 export async function GET(request: Request): Promise<Response> {
@@ -107,6 +111,7 @@ export async function GET(request: Request): Promise<Response> {
       inserted: false,
       advanced: false,
       advanceTo: w.advanceTo,
+      notified: false,
     };
 
     // Insert pending donation. `upsert` with ignoreDuplicates uses the
@@ -152,13 +157,32 @@ export async function GET(request: Request): Promise<Response> {
       outcome.advanced = (advancedRows?.length ?? 0) > 0;
     }
 
+    // DP-056: notify the recipient only when a new pending row was just
+    // inserted. On idempotent retries (`inserted === false`) we skip so
+    // the bell dropdown doesn't collect duplicates for the same due date.
+    if (outcome.inserted) {
+      const notifyResult = await notifyPendingDonation(
+        buildPendingDonationNotifyInput(w)
+      );
+      if (notifyResult.error) {
+        outcome.notifyError = notifyResult.error;
+        console.error(
+          `[cron/recurring] notify failed schedule=${w.scheduleId}`,
+          notifyResult.error
+        );
+      } else {
+        outcome.notified = true;
+      }
+    }
+
     outcomes.push(outcome);
   }
 
   const insertedCount = outcomes.filter((o) => o.inserted).length;
   const skippedCount = outcomes.length - insertedCount;
+  const notifiedCount = outcomes.filter((o) => o.notified).length;
   console.log(
-    `[cron/recurring] ${today} processed=${outcomes.length} inserted=${insertedCount} skipped=${skippedCount} durationMs=${Date.now() - startedAt}`
+    `[cron/recurring] ${today} processed=${outcomes.length} inserted=${insertedCount} skipped=${skippedCount} notified=${notifiedCount} durationMs=${Date.now() - startedAt}`
   );
 
   return NextResponse.json({
@@ -167,6 +191,7 @@ export async function GET(request: Request): Promise<Response> {
     processed: outcomes.length,
     inserted: insertedCount,
     skipped: skippedCount,
+    notified: notifiedCount,
     outcomes,
     durationMs: Date.now() - startedAt,
   });
