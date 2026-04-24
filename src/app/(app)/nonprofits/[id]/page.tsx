@@ -94,9 +94,10 @@ export default async function NonprofitDetailPage({
         <Card className="mb-8">
           <CardContent className="pt-8">
             <div className="flex items-start gap-6">
-              <div className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-success">
-                <Building2 className="h-12 w-12 text-primary-foreground" />
-              </div>
+              <DetailLogo
+                src={nonprofit.logo_url}
+                alt={`${nonprofit.name} logo`}
+              />
 
               <div className="flex-1">
                 <div className="mb-4 flex items-start justify-between gap-4">
@@ -513,5 +514,31 @@ export default async function NonprofitDetailPage({
         </div>
       </main>
     </div>
+  );
+}
+
+function DetailLogo({ src, alt }: { src: string | null; alt: string }) {
+  if (!src) {
+    return (
+      <div
+        className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-success"
+        aria-hidden="true"
+      >
+        <Building2 className="h-12 w-12 text-primary-foreground" />
+      </div>
+    );
+  }
+  // Arbitrary Cloudinary / Every.org S3 hosts; sizing is fixed so no
+  // layout shift. Skip next/image to avoid registering each remote
+  // host in next.config.
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={alt}
+      width={96}
+      height={96}
+      className="h-24 w-24 flex-shrink-0 rounded-lg border border-border object-cover"
+    />
   );
 }

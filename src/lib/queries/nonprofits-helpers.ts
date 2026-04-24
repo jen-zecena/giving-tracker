@@ -4,7 +4,7 @@
  * server component or loading the fixture.
  */
 
-import type { NonprofitRatingSource } from "@/lib/data/nonprofits-fixture";
+import type { NonprofitRatingSource } from "@/lib/queries/nonprofits";
 
 /**
  * Average score across all rating sources, normalised to a 0-100 scale.

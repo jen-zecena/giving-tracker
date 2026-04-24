@@ -1,98 +1,74 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState, useTransition } from "react";
+import Link from "next/link";
 import {
-  AlertTriangle,
   Building2,
   CheckCircle2,
   ExternalLink,
-  Filter,
+  Loader2,
   MapPin,
   Search,
-  Star,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  getAverageRating,
-  searchNonprofits,
-  type Nonprofit,
-  type NonprofitCategory,
-} from "@/lib/fixtures/nonprofits";
+import { syncNonprofitsFromSearch } from "@/lib/actions/nonprofit-sync";
+import type { Nonprofit } from "@/types";
 
 type Props = {
-  nonprofits: Nonprofit[];
-  categories: NonprofitCategory[];
+  initial: Nonprofit[];
 };
 
-function getRatingBadgeClass(rating: number): string {
-  if (rating >= 95) return "bg-success text-primary-foreground hover:bg-success/90";
-  if (rating >= 85) return "bg-[color:var(--info)] text-primary-foreground hover:bg-[color:var(--info)]/90";
-  if (rating >= 75) return "bg-warning text-primary-foreground hover:bg-warning/90";
-  return "bg-muted text-muted-foreground hover:bg-muted/80";
-}
+/**
+ * Directory search surface (DP-064).
+ *
+ * - First render shows the most recently synced rows (server-fetched
+ *   in the page component).
+ * - User submits a query → `syncNonprofitsFromSearch` hits Every.org,
+ *   upserts results, returns DB rows. We replace the visible list.
+ * - Each card links to `/nonprofits/{db_id}` so the detail page can
+ *   read the same row out of the table.
+ *
+ * The previous in-memory category / minRating filters were dropped
+ * here: Every.org doesn't return charity-watchdog ratings, and its
+ * cause-category mapping is sparse on search results. The detail page
+ * still renders any cause categories the row carries.
+ */
+export function NonprofitsClient({ initial }: Props) {
+  const [draft, setDraft] = useState("");
+  const [results, setResults] = useState<Nonprofit[]>(initial);
+  const [pending, startTransition] = useTransition();
+  const [hasSearched, setHasSearched] = useState(false);
 
-function getRatingLabel(rating: number): string {
-  if (rating >= 95) return "Excellent";
-  if (rating >= 85) return "Very Good";
-  return "Good";
-}
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const query = draft.trim();
+    if (!query) {
+      // Empty query resets to the initial server-fetched rows.
+      setResults(initial);
+      setHasSearched(false);
+      return;
+    }
+    startTransition(async () => {
+      const res = await syncNonprofitsFromSearch(query);
+      if (res.error) {
+        toast.error(res.error);
+        return;
+      }
+      setResults(res.data ?? []);
+      setHasSearched(true);
+    });
+  }
 
-export function NonprofitsClient({ nonprofits, categories }: Props) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategories, setSelectedCategories] = useState<NonprofitCategory[]>([]);
-  const [verifiedOnly, setVerifiedOnly] = useState(false);
-  const [minRating, setMinRating] = useState<number | undefined>(undefined);
-  const [showFilters, setShowFilters] = useState(false);
-
-  void nonprofits;
-
-  const results = useMemo(
-    () =>
-      searchNonprofits(searchQuery, {
-        category: selectedCategories,
-        verified: verifiedOnly || undefined,
-        minRating,
-      }),
-    [searchQuery, selectedCategories, verifiedOnly, minRating],
-  );
-
-  const activeFilterCount =
-    selectedCategories.length + (verifiedOnly ? 1 : 0) + (minRating ? 1 : 0);
-
-  const toggleCategory = (category: NonprofitCategory) => {
-    setSelectedCategories((prev) =>
-      prev.includes(category)
-        ? prev.filter((c) => c !== category)
-        : [...prev, category],
-    );
-  };
-
-  const clearAllFilters = () => {
-    setSelectedCategories([]);
-    setVerifiedOnly(false);
-    setMinRating(undefined);
-  };
-
-  const clearAll = () => {
-    setSearchQuery("");
-    clearAllFilters();
-  };
+  function handleClear() {
+    setDraft("");
+    setResults(initial);
+    setHasSearched(false);
+  }
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -105,139 +81,62 @@ export function NonprofitsClient({ nonprofits, categories }: Props) {
               <h3 className="mb-2 text-lg font-semibold text-foreground">
                 Verified Nonprofits
               </h3>
-              <p className="mb-2 text-foreground/80">
-                All organizations in this directory are verified against the IRS
-                501(c)(3) database. Ratings are sourced from Charity Navigator
-                and GuideStar.
-              </p>
-              <p className="text-sm text-muted-foreground">
-                See a suspicious organization?{" "}
-                <button
-                  type="button"
-                  className="text-primary underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none"
-                >
-                  Report it
-                </button>{" "}
-                to our team.
+              <p className="text-foreground/80">
+                Search results come live from Every.org and are restricted
+                to IRS-verified 501(c)(3) organizations. Every result you
+                see has been cross-checked against the federal database.
               </p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Search and Filters */}
+      {/* Search */}
       <Card className="mb-6">
-        <CardContent className="space-y-4 pt-6">
-          {/* Search Bar */}
-          <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search by name, mission, or keyword..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-              aria-label="Search nonprofits"
-            />
-          </div>
-
-          {/* Filter Toggle */}
-          <div className="flex items-center justify-between">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowFilters((v) => !v)}
-              aria-expanded={showFilters}
-              aria-controls="nonprofit-filters"
-            >
-              <Filter className="mr-2 h-4 w-4" />
-              {showFilters ? "Hide" : "Show"} Filters
-              {activeFilterCount > 0 && (
-                <Badge variant="secondary" className="ml-2">
-                  {activeFilterCount}
-                </Badge>
-              )}
-            </Button>
-
-            {activeFilterCount > 0 && (
-              <Button variant="ghost" size="sm" onClick={clearAllFilters}>
-                Clear All Filters
-              </Button>
-            )}
-          </div>
-
-          {/* Filters Panel */}
-          {showFilters && (
-            <div
-              id="nonprofit-filters"
-              className="space-y-4 border-t border-border pt-4"
-            >
-              {/* Category Filters */}
-              <div>
-                <Label className="mb-3 block font-semibold">Categories</Label>
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
-                  {categories.map((category) => {
-                    const id = `cat-${category}`;
-                    return (
-                      <div key={category} className="flex items-center gap-2">
-                        <Checkbox
-                          id={id}
-                          checked={selectedCategories.includes(category)}
-                          onCheckedChange={() => toggleCategory(category)}
-                        />
-                        <label
-                          htmlFor={id}
-                          className="cursor-pointer text-sm text-foreground"
-                        >
-                          {category}
-                        </label>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Other Filters */}
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="nonprofits-verified"
-                    checked={verifiedOnly}
-                    onCheckedChange={(checked) => setVerifiedOnly(checked === true)}
-                  />
-                  <label
-                    htmlFor="nonprofits-verified"
-                    className="cursor-pointer text-sm font-medium text-foreground"
-                  >
-                    Verified Organizations Only
-                  </label>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="nonprofits-min-rating">Minimum Rating</Label>
-                  <Select
-                    value={minRating?.toString() ?? "all"}
-                    onValueChange={(value) => {
-                      if (!value || value === "all") {
-                        setMinRating(undefined);
-                      } else {
-                        setMinRating(parseInt(value, 10));
-                      }
-                    }}
-                  >
-                    <SelectTrigger id="nonprofits-min-rating">
-                      <SelectValue placeholder="Any rating" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Any rating</SelectItem>
-                      <SelectItem value="95">95+ (Excellent)</SelectItem>
-                      <SelectItem value="85">85+ (Very Good)</SelectItem>
-                      <SelectItem value="75">75+ (Good)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+        <CardContent className="pt-6">
+          <form
+            onSubmit={handleSubmit}
+            className="flex flex-col gap-3 md:flex-row md:items-center"
+          >
+            <div className="relative flex-1">
+              <Search
+                className="pointer-events-none absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-muted-foreground"
+                aria-hidden="true"
+              />
+              <Input
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder="Search Every.org by name or keyword (e.g. 'water', 'red cross')…"
+                className="pl-10"
+                aria-label="Search nonprofits"
+              />
             </div>
-          )}
+            <div className="flex gap-2">
+              <Button type="submit" disabled={pending}>
+                {pending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Searching…
+                  </>
+                ) : (
+                  <>
+                    <Search className="mr-2 h-4 w-4" />
+                    Search
+                  </>
+                )}
+              </Button>
+              {(hasSearched || draft.length > 0) && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClear}
+                  disabled={pending}
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+          </form>
         </CardContent>
       </Card>
 
@@ -247,11 +146,10 @@ export function NonprofitsClient({ nonprofits, categories }: Props) {
           <CardContent className="py-12 pt-6 text-center">
             <Building2 className="mx-auto mb-4 h-12 w-12 text-muted-foreground/50" />
             <p className="text-muted-foreground">
-              No nonprofits found matching your criteria
+              {hasSearched
+                ? "No organizations match your search. Try a broader keyword."
+                : "Search above to discover verified nonprofits."}
             </p>
-            <Button variant="outline" className="mt-4" onClick={clearAll}>
-              Clear Filters
-            </Button>
           </CardContent>
         </Card>
       ) : (
@@ -268,17 +166,15 @@ export function NonprofitsClient({ nonprofits, categories }: Props) {
 }
 
 function NonprofitCard({ nonprofit }: { nonprofit: Nonprofit }) {
-  const avgRating = getAverageRating(nonprofit);
-  const hasRatings = nonprofit.ratings.length > 0;
-
   return (
     <Card className="transition-shadow hover:shadow-md">
       <CardContent className="pt-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start">
           {/* Logo */}
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-chart-3">
-            <Building2 className="h-8 w-8 text-primary-foreground" />
-          </div>
+          <NonprofitLogo
+            src={nonprofit.logo_url}
+            alt={`${nonprofit.name} logo`}
+          />
 
           {/* Content */}
           <div className="min-w-0 flex-1">
@@ -286,7 +182,12 @@ function NonprofitCard({ nonprofit }: { nonprofit: Nonprofit }) {
               <div className="min-w-0 flex-1">
                 <div className="mb-1 flex flex-wrap items-center gap-2">
                   <h3 className="text-xl font-bold text-foreground">
-                    {nonprofit.name}
+                    <Link
+                      href={`/nonprofits/${nonprofit.id}`}
+                      className="hover:underline focus-visible:underline focus-visible:outline-none"
+                    >
+                      {nonprofit.name}
+                    </Link>
                   </h3>
                   {nonprofit.verified && (
                     <Badge className="bg-success text-primary-foreground hover:bg-success/90">
@@ -294,86 +195,99 @@ function NonprofitCard({ nonprofit }: { nonprofit: Nonprofit }) {
                       Verified
                     </Badge>
                   )}
-                  {nonprofit.flagged && (
-                    <Badge variant="destructive">
-                      <AlertTriangle className="mr-1 h-3 w-3" />
-                      Flagged
-                    </Badge>
-                  )}
                 </div>
                 <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-                  <MapPin className="h-4 w-4" />
-                  <span>
-                    {nonprofit.location.city}, {nonprofit.location.state}
-                  </span>
-                  <span aria-hidden="true">•</span>
+                  {nonprofit.location && (
+                    <>
+                      <MapPin className="h-4 w-4" />
+                      <span>{nonprofit.location}</span>
+                      <span aria-hidden="true">•</span>
+                    </>
+                  )}
                   <span className="font-mono">EIN: {nonprofit.ein}</span>
                 </div>
               </div>
+            </div>
 
-              {/* Rating */}
-              {hasRatings && (
-                <div className="text-right">
-                  <div className="mb-1 flex items-center gap-1">
-                    <Star className="h-5 w-5 fill-warning text-warning" />
-                    <span className="font-mono text-lg font-bold text-foreground">
-                      {avgRating.toFixed(0)}
-                    </span>
-                  </div>
-                  <Badge className={getRatingBadgeClass(avgRating)}>
-                    {getRatingLabel(avgRating)}
+            {nonprofit.mission && (
+              <p className="mb-3 line-clamp-2 text-foreground/80">
+                {nonprofit.mission}
+              </p>
+            )}
+
+            {nonprofit.category.length > 0 && (
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                {nonprofit.category.slice(0, 3).map((cat) => (
+                  <Badge key={cat} variant="outline">
+                    {cat}
                   </Badge>
-                </div>
-              )}
-            </div>
-
-            <p className="mb-3 line-clamp-2 text-foreground/80">
-              {nonprofit.mission}
-            </p>
-
-            {/* Tags */}
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              {nonprofit.category.slice(0, 3).map((cat) => (
-                <Badge key={cat} variant="outline">
-                  {cat}
-                </Badge>
-              ))}
-              {nonprofit.category.length > 3 && (
-                <Badge variant="outline">
-                  +{nonprofit.category.length - 3} more
-                </Badge>
-              )}
-            </div>
-
-            {/* Ratings Details */}
-            {hasRatings && (
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                {nonprofit.ratings.map((rating) => (
-                  <span key={rating.source}>
-                    {rating.source}:{" "}
-                    <span className="font-mono font-semibold text-foreground">
-                      {rating.rating}
-                    </span>
-                  </span>
                 ))}
+                {nonprofit.category.length > 3 && (
+                  <Badge variant="outline">
+                    +{nonprofit.category.length - 3} more
+                  </Badge>
+                )}
               </div>
             )}
           </div>
 
           {/* Action Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="shrink-0"
-            onClick={() =>
-              window.open(nonprofit.donationUrl, "_blank", "noopener,noreferrer")
-            }
-          >
-            <ExternalLink className="mr-2 h-4 w-4" />
-            Donate
-          </Button>
+          {nonprofit.donation_url && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              render={
+                <a
+                  href={nonprofit.donation_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />
+              }
+            >
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Donate
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function NonprofitLogo({
+  src,
+  alt,
+}: {
+  src: string | null;
+  alt: string;
+}) {
+  // Cloudinary URLs occasionally 404 if Every.org clears an image; we
+  // render the icon fallback in that case via onError.
+  const [errored, setErrored] = useState(false);
+  if (!src || errored) {
+    return (
+      <div
+        className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-chart-3"
+        aria-hidden="true"
+      >
+        <Building2 className="h-8 w-8 text-primary-foreground" />
+      </div>
+    );
+  }
+  // Arbitrary Cloudinary / Every.org S3 hosts; sizing is fixed so no
+  // layout shift. Skip next/image to avoid registering each remote
+  // host in next.config and to keep onError fallback semantics.
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={alt}
+      width={64}
+      height={64}
+      className="h-16 w-16 shrink-0 rounded-lg border border-border object-cover"
+      onError={() => setErrored(true)}
+      loading="lazy"
+    />
   );
 }

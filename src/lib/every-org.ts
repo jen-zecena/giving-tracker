@@ -182,6 +182,7 @@ export function mapSearchResultToNonprofit(r: EveryOrgSearchResult): Nonprofit {
     location: parseLocation(r.location),
     website: r.websiteUrl ?? r.profileUrl,
     donationUrl: r.profileUrl,
+    logoUrl: pickLogoUrl(r.logoUrl, r.logoCloudinaryId),
     verified: true,
     flagged: false,
     flagCount: 0,
@@ -210,11 +211,33 @@ export function mapDetailToNonprofit(raw: EveryOrgDetailResponse): Nonprofit {
     location: parseLocation(n.locationAddress ?? undefined),
     website: n.websiteUrl ?? n.profileUrl,
     donationUrl: n.profileUrl,
+    logoUrl: pickLogoUrl(undefined, n.logoCloudinaryId),
     verified: true,
     flagged: false,
     flagCount: 0,
     ratings: [],
   };
+}
+
+/**
+ * Resolve a usable square logo URL from Every.org's two representations:
+ * either a fully-formed `logoUrl` (search endpoint sometimes returns
+ * one) or a `logoCloudinaryId` (detail endpoint always returns this
+ * shape). When both are absent or the id is the empty string, returns
+ * `null` so the renderer falls back to the generic Building2 icon.
+ *
+ * The Cloudinary transform mirrors what Every.org uses for their tag
+ * thumbnails: square crop, retina-friendly 240px, auto format/quality,
+ * progressive load. Picked once here so individual call-sites don't
+ * each invent their own (and end up with mismatched sizing).
+ */
+export function pickLogoUrl(
+  explicitUrl: string | undefined,
+  cloudinaryId: string | null | undefined,
+): string | null {
+  if (explicitUrl && explicitUrl.trim().length > 0) return explicitUrl;
+  if (!cloudinaryId || cloudinaryId.trim().length === 0) return null;
+  return `https://res.cloudinary.com/everydotorg/image/upload/c_lfill,w_120,h_120,dpr_2/c_crop,ar_1:1/q_auto,f_auto,fl_progressive/${cloudinaryId}`;
 }
 
 // ── Internals ─────────────────────────────────────────────────────────
