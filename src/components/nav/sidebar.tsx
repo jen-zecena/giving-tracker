@@ -44,9 +44,20 @@ const bottomNavItems = [
   { icon: User, label: "Profile", href: "/profile" },
 ];
 
+// Sub-routes that have their own dedicated nav entry — listing them here
+// keeps the parent ("/donations") from lighting up when we're on a child.
+const DEDICATED_SUBROUTES: Record<string, string[]> = {
+  "/donations": ["/donations/new", "/donations/recurring"],
+};
+
 function isActive(pathname: string, href: string) {
   if (href === "/dashboard") return pathname === "/dashboard";
-  return pathname === href || pathname.startsWith(href + "/");
+  if (pathname === href) return true;
+  const dedicated = DEDICATED_SUBROUTES[href];
+  if (dedicated?.some((r) => pathname === r || pathname.startsWith(r + "/"))) {
+    return false;
+  }
+  return pathname.startsWith(href + "/");
 }
 
 export function Sidebar() {
