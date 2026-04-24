@@ -15,6 +15,7 @@
  */
 
 import {
+  buildPendingDonationNotifyInput,
   isAuthorizedCronRequest,
   planPendingWork,
   utcTodayIso,
@@ -182,6 +183,38 @@ console.log("\nutcTodayIso:");
     "returns YYYY-MM-DD",
     /^\d{4}-\d{2}-\d{2}$/.test(today),
     `got ${today}`
+  );
+}
+
+// ── buildPendingDonationNotifyInput (DP-056) ───────────────
+// Pins the PendingWork → notifyPendingDonation input contract so the
+// route handler's notification wiring can't silently drift. The route
+// is expected to invoke notify using the original due date (not the
+// advanced one) so the bell dropdown surfaces the actionable date.
+console.log("\nbuildPendingDonationNotifyInput:");
+
+{
+  const today = "2026-04-19";
+  const [work] = planPendingWork(
+    [
+      sched({
+        id: "ssss-1111",
+        user_id: "uuuu-1111",
+        organization_name: "UNICEF",
+        next_due_date: "2026-04-15",
+        frequency: "monthly",
+      }),
+    ],
+    today
+  );
+  const input = buildPendingDonationNotifyInput(work);
+  eq("userId comes from the schedule", input.userId, "uuuu-1111");
+  eq("organizationName comes from the schedule", input.organizationName, "UNICEF");
+  eq("scheduleId comes from the schedule", input.scheduleId, "ssss-1111");
+  eq(
+    "dueDate is the pre-advance next_due_date (not the advanced one)",
+    input.dueDate,
+    "2026-04-15"
   );
 }
 
