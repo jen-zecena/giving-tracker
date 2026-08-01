@@ -77,6 +77,12 @@ GitHub project: "Giving Tracker" (project number 2, owner jen-zecena). Use `gh` 
 - **Offline mirror (partial):** A local snapshot of frequently referenced pages lives at `~/Projects/giving-tracker-figma-source/` (not checked in). Treat the MCP as canonical — the mirror is only for grep / offline reading, not guaranteed current.
 - **When porting a page:** pull the matching `src/app/pages/*.tsx` via MCP, match its layout/spacing/copy, and map its literal `blue-*`/`purple-*`/`green-*` Tailwind colors onto our theme tokens (`--primary`, `--accent`, `--success`, `--info`, `--metric-*`) per the Design Guardrails below. Don't improve the design — match it.
 
+### Visual Theme (canonical)
+- **The canonical *visual theme* is "SnowUI"** — Figma Community file `tkGncRCqauBRP3qMK4oJpX` (Dashboard Design System). It supersedes the earlier Figma Make palette for all color/surface/shadow decisions.
+- **`src/app/globals.css` is the source of truth for token *values*.** Both light (`:root`) and dark (`.dark`) palettes are defined there. Don't reintroduce the old indigo/`#111827` values.
+- **Roles:** Figma Make (`Charitable-Donations-Tracker`) still governs page *structure* — layout, spacing, copy — when porting. SnowUI governs the *look* — token values, pastel KPI surfaces, desaturated charts, light+dark. Port structure from Figma Make; the SnowUI-flavored tokens supply the color automatically.
+- **Primary is intentionally near-black** (`#1c1c1c` light / `#f4f4f5` dark), not indigo — SnowUI draws its color from the pastel metric surfaces (`--metric-*`) and the desaturated chart palette, not from a saturated brand hue.
+
 ### Dev Server & Screenshots
 - Dev server: `npm run dev` (serves at `http://localhost:3000`). Start in background before any screenshots.
 - Use the `agent-browser` skill to screenshot and visually verify pages on localhost. Never screenshot a `file:///` URL.
@@ -97,7 +103,7 @@ GitHub project: "Giving Tracker" (project number 2, owner jen-zecena). Use `gh` 
 
 ### Design Guardrails
 - **Colors:** Use the shadcn/ui theme tokens defined in `globals.css` (`--primary`, `--accent`, `--muted`, `--chart-1` through `--chart-5`, etc.). Never hardcode hex/oklch values or use default Tailwind palette colors (indigo-500, blue-600, etc.) directly.
-- **Dark mode:** Dashboard and data-heavy pages should default to dark mode. The `.dark` class on `<html>` activates the dark theme tokens already defined in `globals.css`.
+- **Dark mode:** Light and dark are both supported. The app defaults to **light** with a persisted user toggle (`next-themes`, sidebar footer → `ThemeToggle`); `next-themes` applies the `.dark` class on `<html>`, activating the dark tokens in `globals.css`. Design every new surface to work in both modes — verify with the toggle.
 - **Shadows:** Use shadcn/ui's shadow tokens or layered, low-opacity shadows. Avoid flat `shadow-md` with no thought.
 - **Animations:** Only animate `transform` and `opacity`. Never use `transition-all`. Use subtle easing.
 - **Interactive states:** Every clickable element needs hover, focus-visible, and active states. Use shadcn/ui's built-in states where available.

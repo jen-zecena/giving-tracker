@@ -3,14 +3,20 @@
 @import "shadcn/tailwind.css";
 
 /*
- * Design tokens sourced from the Figma Make project
- * "Charitable-Donations-Tracker" (file YLPPnOcPAkDqwZcB4PKwHe), src/styles/theme.css.
+ * Design tokens themed after the "SnowUI" dashboard design system
+ * (Figma Community, file tkGncRCqauBRP3qMK4oJpX). This is the current canonical
+ * visual reference — it supersedes the earlier Figma Make "Charitable-Donations-
+ * Tracker" palette.
  *
- * Light mode only for the Figma Make port. Dark mode is a post-port follow-up
- * initiative — see FIGMA_PORT_PLAN.md §10 and issue DP-075. The `@custom-variant
- * dark` declaration is intentionally retained so shadcn components using `dark:`
- * prefixes still compile — they just have no runtime effect until a real dark
- * palette is defined.
+ * SnowUI signatures encoded below:
+ *   - warm near-white light bg / soft-charcoal dark bg (not OLED black)
+ *   - white cards in light, low-contrast elevated surfaces in dark
+ *   - two signature pastel accents (soft blue #e4f0fc, lavender #ececfc)
+ *   - desaturated chart palette (soft indigo / blue / mint / lavender / amber)
+ *   - soft, layered low-opacity shadows; thin light borders
+ *
+ * Both light (:root) and dark (.dark) palettes are now defined. Add the `dark`
+ * class to <html> to activate the dark theme.
  */
 
 @custom-variant dark (&:is(.dark *));
@@ -53,6 +59,7 @@
   --color-metric-green: var(--metric-green);
   --color-metric-yellow: var(--metric-yellow);
   --color-metric-red: var(--metric-red);
+  --color-metric-foreground: var(--metric-foreground);
 
   --color-success: var(--success);
   --color-warning: var(--warning);
@@ -90,49 +97,50 @@
 
   /* Core surface + text */
   --background: #f7f9fb;
-  --foreground: #111827;
+  --foreground: #1c1c1c;
   --card: #ffffff;
-  --card-foreground: #111827;
+  --card-foreground: #1c1c1c;
   --popover: #ffffff;
-  --popover-foreground: #111827;
+  --popover-foreground: #1c1c1c;
 
-  /* Brand */
-  --primary: #5b5bdb;
+  /* Brand — SnowUI near-black primary; color comes from pastels + charts */
+  --primary: #1c1c1c;
   --primary-foreground: #ffffff;
-  --secondary: #eef2ff;
-  --secondary-foreground: #111827;
-  --muted: #f3f4f6;
-  --muted-foreground: #6b7280;
-  --accent: #e9e7fd;
-  --accent-foreground: #111827;
+  --secondary: #eef1f6;
+  --secondary-foreground: #1c1c1c;
+  --muted: #f2f4f7;
+  --muted-foreground: #6e7787;
+  --accent: #e4f0fc;
+  --accent-foreground: #1c1c1c;
 
   /* Feedback */
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
 
   /* Form + control */
-  --border: #e5e7eb;
+  --border: #eceef1;
   --input: transparent;
-  --input-background: #f9fafb;
+  --input-background: #f7f9fb;
   --switch-background: #cbced4;
-  --ring: #5b5bdb;
+  --ring: #1c1c1c;
 
-  /* Chart palette */
-  --chart-1: #5b5bdb;
-  --chart-2: #8b5cf6;
-  --chart-3: #10b981;
-  --chart-4: #f59e0b;
-  --chart-5: #ef4444;
+  /* Chart palette — desaturated SnowUI series */
+  --chart-1: #95a4fc;
+  --chart-2: #a8c5da;
+  --chart-3: #7ee2b8;
+  --chart-4: #c6c7f8;
+  --chart-5: #ffcf9e;
 
   /* Metric card pastels (used by dashboard KPI cards) */
-  --metric-purple: #e9e7fd;
-  --metric-blue: #eef2ff;
-  --metric-green: #d1fae5;
-  --metric-yellow: #fef3c7;
-  --metric-red: #fee2e2;
+  --metric-purple: #ececfc;
+  --metric-blue: #e4f0fc;
+  --metric-green: #dcf5e7;
+  --metric-yellow: #fdf3d7;
+  --metric-red: #ffe4e4;
+  --metric-foreground: #1c1c1c;
 
   /* Semantic colors */
-  --success: #10b981;
+  --success: #1fc16b;
   --warning: #f59e0b;
   --info: #3b82f6;
 
@@ -149,13 +157,82 @@
 
   /* Sidebar */
   --sidebar: #ffffff;
-  --sidebar-foreground: #111827;
-  --sidebar-primary: #5b5bdb;
+  --sidebar-foreground: #1c1c1c;
+  --sidebar-primary: #1c1c1c;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f9fafb;
-  --sidebar-accent-foreground: #111827;
-  --sidebar-border: #e5e7eb;
-  --sidebar-ring: #5b5bdb;
+  --sidebar-accent: #f2f4f7;
+  --sidebar-accent-foreground: #1c1c1c;
+  --sidebar-border: #eceef1;
+  --sidebar-ring: #1c1c1c;
+}
+
+/*
+ * Dark theme — SnowUI soft-charcoal. Activated by the `dark` class on <html>.
+ * Surfaces are low-contrast (background → card → popover step up only slightly),
+ * separated by thin light-alpha borders rather than heavy shadows. The pastel
+ * metric cards intentionally stay dark-tinted here (readable with light text);
+ * flipping them to the light pastels is a follow-up once the KPI card component
+ * uses --metric-foreground consistently.
+ */
+.dark {
+  /* Core surface + text */
+  --background: #1c1c1e;
+  --foreground: #f4f4f5;
+  --card: #242427;
+  --card-foreground: #f4f4f5;
+  --popover: #29292d;
+  --popover-foreground: #f4f4f5;
+
+  /* Brand — SnowUI near-white primary on dark; color comes from pastels + charts */
+  --primary: #f4f4f5;
+  --primary-foreground: #1c1c1e;
+  --secondary: #2a2a2e;
+  --secondary-foreground: #f4f4f5;
+  --muted: #29292d;
+  --muted-foreground: #a1a1aa;
+  --accent: #2f2f34;
+  --accent-foreground: #f4f4f5;
+
+  /* Feedback */
+  --destructive: #f87171;
+  --destructive-foreground: #1c1c1e;
+
+  /* Form + control */
+  --border: #313135;
+  --input: transparent;
+  --input-background: #242427;
+  --switch-background: #3f3f46;
+  --ring: #f4f4f5;
+
+  /* Chart palette — desaturated SnowUI series, brightened for dark surfaces */
+  --chart-1: #c6c7f8;
+  --chart-2: #a8c5da;
+  --chart-3: #7ee2b8;
+  --chart-4: #95a4fc;
+  --chart-5: #ffcf9e;
+
+  /* Metric card tints — deep, tinted, readable with light text */
+  --metric-purple: #2c2a45;
+  --metric-blue: #1f2b3d;
+  --metric-green: #163a2c;
+  --metric-yellow: #3a3320;
+  --metric-red: #3a2626;
+  --metric-foreground: #f4f4f5;
+
+  /* Semantic colors */
+  --success: #3ecf8e;
+  --warning: #fbbf24;
+  --info: #60a5fa;
+
+  /* Sidebar */
+  --sidebar: #202023;
+  --sidebar-foreground: #f4f4f5;
+  --sidebar-primary: #f4f4f5;
+  --sidebar-primary-foreground: #1c1c1e;
+  --sidebar-accent: #2a2a2e;
+  --sidebar-accent-foreground: #f4f4f5;
+  --sidebar-border: #313135;
+  --sidebar-ring: #f4f4f5;
 }
 
 @layer base {

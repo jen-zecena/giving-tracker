@@ -20,6 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { usePendingDonations } from "@/components/nav/pending-donations-context";
 import { cn } from "@/lib/utils";
 
@@ -191,8 +192,9 @@ export function Sidebar() {
           </div>
         </nav>
 
-        {/* Bottom section — Settings */}
-        <div className="p-4 border-t border-border">
+        {/* Bottom section — theme toggle + Settings */}
+        <div className="p-4 border-t border-border space-y-1">
+          <ThemeToggle />
           <Link
             href="/settings"
             onClick={handleNavigation}
