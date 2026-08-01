@@ -16,6 +16,7 @@ import {
   Award,
   Settings,
   Heart,
+  Shield,
   Menu,
   X,
 } from "lucide-react";
@@ -34,6 +35,13 @@ const menuItems = [
   { icon: Building2, label: "Nonprofits", href: "/nonprofits" },
   { icon: Target, label: "Personal Goals", href: "/goals" },
   { icon: Award, label: "Milestones", href: "/badges" },
+];
+
+// Admin-only entries, appended to the nav when the current user is an admin.
+// Non-admins never see these links; the /admin/* route guard and RLS remain
+// the enforcement boundary regardless of what renders here.
+const adminMenuItems = [
+  { icon: Shield, label: "Review Queue", href: "/admin/review-queue" },
 ];
 
 const bottomNavItems = [
@@ -60,10 +68,12 @@ function isActive(pathname: string, href: string) {
   return pathname.startsWith(href + "/");
 }
 
-export function Sidebar() {
+export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { pendingCount } = usePendingDonations();
+
+  const navItems = isAdmin ? [...menuItems, ...adminMenuItems] : menuItems;
 
   const handleNavigation = () => {
     setIsMobileMenuOpen(false);
@@ -151,7 +161,7 @@ export function Sidebar() {
         {/* Nav items */}
         <nav className="flex-1 p-4 overflow-y-auto">
           <div className="space-y-1">
-            {menuItems.map((item) => {
+            {navItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(pathname, item.href);
               const showBadge = item.href === "/donations" && pendingCount > 0;
