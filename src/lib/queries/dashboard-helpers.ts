@@ -9,6 +9,17 @@
  * rather than throwing, so callers can safely render empty dashboards.
  */
 
+import {
+  eachDayOfInterval,
+  eachMonthOfInterval,
+  eachWeekOfInterval,
+  format,
+  parseISO,
+  startOfMonth,
+  startOfWeek,
+} from "date-fns";
+
+import type { DateRange, TrendGranularity } from "@/lib/dashboard-timeframe";
 import type {
   CauseBreakdown,
   CauseTag,
@@ -16,7 +27,12 @@ import type {
   MoMComparison,
   MonthlyTotal,
   ScopeBreakdown,
+  TrendPoint,
 } from "@/types";
+
+// Monday-based weeks keep the weekly trend buckets aligned with common
+// calendar expectations.
+const WEEK_OPTS = { weekStartsOn: 1 } as const;
 
 // ── Date helpers ──────────────────────────────────────────
 
@@ -157,6 +173,61 @@ export function aggregateMonthly(
   }
 
   return Array.from(byMonth.entries()).map(([month, total]) => ({ month, total }));
+}
+
+/**
+ * Buckets confirmed donations into a continuous trend series across an
+ * inclusive [start, end] window. Empty leading/trailing buckets are kept so
+ * the area chart draws a gap-free line. Granularity controls the bucket size
+ * and the pre-formatted axis `label` (day/week → "MMM d", month → "MMM",
+ * or "MMM 'yy" when a monthly range spans calendar years).
+ */
+export function aggregateTrend(
+  rows: ReadonlyArray<DonationRowForAggregation>,
+  range: DateRange,
+  granularity: TrendGranularity
+): TrendPoint[] {
+  const start = parseISO(range.start);
+  const end = parseISO(range.end);
+  if (end < start) return [];
+
+  const bucketStarts =
+    granularity === "day"
+      ? eachDayOfInterval({ start, end })
+      : granularity === "week"
+        ? eachWeekOfInterval({ start, end }, WEEK_OPTS)
+        : eachMonthOfInterval({ start, end });
+
+  const totals = new Map<string, number>();
+  for (const d of bucketStarts) totals.set(format(d, "yyyy-MM-dd"), 0);
+
+  const bucketKey = (dateStr: string): string => {
+    const d = parseISO(dateStr);
+    const bucketStart =
+      granularity === "day"
+        ? d
+        : granularity === "week"
+          ? startOfWeek(d, WEEK_OPTS)
+          : startOfMonth(d);
+    return format(bucketStart, "yyyy-MM-dd");
+  };
+
+  for (const r of rows) {
+    if (r.status && r.status !== "confirmed") continue;
+    const key = bucketKey(r.donation_date);
+    if (totals.has(key)) totals.set(key, (totals.get(key) ?? 0) + r.amount);
+  }
+
+  const spansYears =
+    granularity === "month" && start.getFullYear() !== end.getFullYear();
+  const labelFormat =
+    granularity === "month" ? (spansYears ? "MMM ''yy" : "MMM") : "MMM d";
+
+  return Array.from(totals.entries()).map(([date, total]) => ({
+    date,
+    label: format(parseISO(date), labelFormat),
+    total,
+  }));
 }
 
 const ALL_SCOPES: DonationScope[] = ["local", "national", "global"];

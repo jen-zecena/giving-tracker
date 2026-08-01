@@ -12,12 +12,11 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { format, parse } from "date-fns";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { MonthlyTotal, ScopeBreakdown } from "@/types";
+import type { ScopeBreakdown, TrendPoint } from "@/types";
 
-// ── Monthly Area Chart ───────────────────────────────────
+// ── Trend Area Chart ─────────────────────────────────────
 
 const CHART_COLORS = {
   area: "var(--chart-1)",
@@ -26,23 +25,24 @@ const CHART_COLORS = {
   text: "var(--muted-foreground)",
 };
 
-function formatMonthLabel(month: string): string {
-  const date = parse(month, "yyyy-MM", new Date());
-  return format(date, "MMM");
-}
-
 function formatCurrency(value: number): string {
   if (value >= 1000) return `$${(value / 1000).toFixed(1)}k`;
   return `$${value}`;
 }
 
-export function MonthlyChart({ data }: { data: MonthlyTotal[] }) {
+/**
+ * Timeframe-scoped area chart. Points arrive with pre-formatted `label`s
+ * (day / week / month depending on the selected range's span), so the axis
+ * renders them directly and thins ticks when a short range yields many
+ * daily points.
+ */
+export function TrendChart({ data }: { data: TrendPoint[] }) {
   if (data.length === 0) return null;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base font-medium">Monthly Donations</CardTitle>
+        <CardTitle className="text-base font-medium">Donation Trend</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-[280px]">
@@ -60,11 +60,12 @@ export function MonthlyChart({ data }: { data: MonthlyTotal[] }) {
                 vertical={false}
               />
               <XAxis
-                dataKey="month"
-                tickFormatter={formatMonthLabel}
+                dataKey="label"
                 tick={{ fontSize: 12, fill: CHART_COLORS.text }}
                 axisLine={false}
                 tickLine={false}
+                interval="preserveStartEnd"
+                minTickGap={24}
               />
               <YAxis
                 tickFormatter={formatCurrency}
@@ -74,7 +75,6 @@ export function MonthlyChart({ data }: { data: MonthlyTotal[] }) {
               />
               <Tooltip
                 formatter={(value) => [`$${Number(value).toLocaleString()}`, "Donated"]}
-                labelFormatter={(label) => formatMonthLabel(String(label))}
                 contentStyle={{
                   borderRadius: "var(--radius)",
                   border: "1px solid var(--border)",

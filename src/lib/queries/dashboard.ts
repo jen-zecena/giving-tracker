@@ -9,7 +9,7 @@
  *
  * React's `cache()` memoizes each call for the lifetime of a single
  * request — so a page that reads `getDashboardSummary()` and
- * `getMonthlyTotals()` doesn't re-query overlapping rows.
+ * `getRangeTotals()` doesn't re-query overlapping rows.
  *
  * Cross-request caching via `unstable_cache` is intentionally NOT wired
  * here — it conflicts with the cookies() API used by the SSR Supabase
@@ -19,6 +19,12 @@
 
 import { cache } from "react";
 
+import {
+  DEFAULT_TIMEFRAME,
+  resolveTimeframe,
+  trendGranularity,
+  type DateRange,
+} from "@/lib/dashboard-timeframe";
 import { calculateDonationPercentage } from "@/lib/salary";
 import { createClient } from "@/lib/supabase/server";
 import type {
@@ -27,15 +33,16 @@ import type {
   Donation,
   CauseBreakdown,
   MoMComparison,
-  MonthlyTotal,
+  RangeTotals,
   ScopeBreakdown,
+  TrendPoint,
 } from "@/types";
 
 import { BADGE_IDS, getEarnedBadgesCount } from "./badges";
 import {
   aggregateByCause,
   aggregateByScope,
-  aggregateMonthly,
+  aggregateTrend,
   computeMoMComparison,
   countDistinctOrganizations,
   generateInsights,
@@ -76,9 +83,12 @@ const EMPTY_MOM: MoMComparison = {
   percentage_change: null,
 };
 
+const EMPTY_RANGE: RangeTotals = { total: 0, count: 0, organizations: 0 };
+
 export const EMPTY_DASHBOARD_DATA: DashboardData = {
   summary: EMPTY_SUMMARY,
-  monthly: [],
+  range: EMPTY_RANGE,
+  trend: [],
   scope: [],
   cause: [],
   mom: EMPTY_MOM,
@@ -132,6 +142,92 @@ const fetchLast12Months = cache(async (): Promise<{
 
   return { userId, rows: data ?? [] };
 });
+
+// ── Range-scoped fetch (memoized per request per window) ──
+
+/**
+ * Pulls a user's donations within an inclusive [start, end] window. Unlike
+ * `fetchLast12Months`, the window is caller-supplied so custom ranges beyond
+ * a year still work. Memoized on the (start, end) string pair, so the range
+ * totals / trend / scope / cause views all share a single query per render.
+ */
+const fetchDonationsInRange = cache(
+  async (
+    start: string,
+    end: string
+  ): Promise<{
+    userId: string | null;
+    rows: Array<
+      Pick<
+        Donation,
+        | "amount"
+        | "donation_date"
+        | "scope"
+        | "cause_tag"
+        | "status"
+        | "organization_name"
+      >
+    >;
+  }> => {
+    const userId = await getUserId();
+    if (!userId) return { userId: null, rows: [] };
+
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("donations")
+      .select(
+        "amount, donation_date, scope, cause_tag, status, organization_name"
+      )
+      .eq("user_id", userId)
+      .gte("donation_date", start)
+      .lte("donation_date", end)
+      .order("donation_date", { ascending: false });
+
+    return { userId, rows: data ?? [] };
+  }
+);
+
+// ── Range-scoped headline totals (confirmed only) ─────────
+
+export const getRangeTotals = cache(
+  async (range: DateRange): Promise<RangeTotals> => {
+    const { userId, rows } = await fetchDonationsInRange(range.start, range.end);
+    if (!userId) return EMPTY_RANGE;
+    const confirmed = rows.filter((r) => r.status === "confirmed");
+    return {
+      total: confirmed.reduce((s, r) => s + r.amount, 0),
+      count: confirmed.length,
+      organizations: countDistinctOrganizations(confirmed),
+    };
+  }
+);
+
+// ── Range-scoped trend / scope / cause ────────────────────
+// The aggregators filter to confirmed rows internally.
+
+export const getTrendInRange = cache(
+  async (range: DateRange): Promise<TrendPoint[]> => {
+    const { userId, rows } = await fetchDonationsInRange(range.start, range.end);
+    if (!userId) return [];
+    return aggregateTrend(rows, range, trendGranularity(range));
+  }
+);
+
+export const getScopeBreakdownInRange = cache(
+  async (range: DateRange): Promise<ScopeBreakdown[]> => {
+    const { userId, rows } = await fetchDonationsInRange(range.start, range.end);
+    if (!userId) return [];
+    return aggregateByScope(rows);
+  }
+);
+
+export const getCauseBreakdownInRange = cache(
+  async (range: DateRange): Promise<CauseBreakdown[]> => {
+    const { userId, rows } = await fetchDonationsInRange(range.start, range.end);
+    if (!userId) return [];
+    return aggregateByCause(rows);
+  }
+);
 
 // ── Summary ───────────────────────────────────────────────
 
@@ -188,36 +284,6 @@ export const getDashboardSummary = cache(async (): Promise<DashboardSummary> => 
   };
 });
 
-// ── Monthly area chart ────────────────────────────────────
-
-export const getMonthlyTotals = cache(
-  async (months = 12): Promise<MonthlyTotal[]> => {
-    const { userId, rows } = await fetchLast12Months();
-    if (!userId) return [];
-    return aggregateMonthly(rows, months);
-  }
-);
-
-// ── Scope pie ─────────────────────────────────────────────
-
-export const getScopeBreakdown = cache(async (): Promise<ScopeBreakdown[]> => {
-  const { userId, rows } = await fetchLast12Months();
-  if (!userId) return [];
-  const ytdStart = getYTDStart();
-  const ytdRows = rows.filter((r) => r.donation_date >= ytdStart);
-  return aggregateByScope(ytdRows);
-});
-
-// ── Cause bar list ────────────────────────────────────────
-
-export const getCauseBreakdown = cache(async (): Promise<CauseBreakdown[]> => {
-  const { userId, rows } = await fetchLast12Months();
-  if (!userId) return [];
-  const ytdStart = getYTDStart();
-  const ytdRows = rows.filter((r) => r.donation_date >= ytdStart);
-  return aggregateByCause(ytdRows);
-});
-
 // ── Month-over-month ──────────────────────────────────────
 
 export const getMoMComparison = cache(async (): Promise<MoMComparison> => {
@@ -264,18 +330,31 @@ export const getInsights = cache(async (): Promise<Insight[]> => {
 
 // ── Aggregate (single call for the Dashboard page) ────────
 
-export async function getDashboardData(): Promise<DashboardData> {
+/**
+ * Single entry point for the Dashboard page. The `range` (from the URL
+ * timeframe selector) scopes the headline totals, trend, scope, and cause
+ * views. The month-anchored / all-time cards (this month, streak, MoM,
+ * recent, badges) come from `getDashboardSummary` and stay fixed regardless
+ * of the selected timeframe. Defaults to the YTD window when no range given.
+ */
+export async function getDashboardData(
+  range?: DateRange
+): Promise<DashboardData> {
   const userId = await getUserId();
   if (!userId) return EMPTY_DASHBOARD_DATA;
 
-  const [summary, monthly, scope, cause, mom, recent] = await Promise.all([
-    getDashboardSummary(),
-    getMonthlyTotals(),
-    getScopeBreakdown(),
-    getCauseBreakdown(),
-    getMoMComparison(),
-    getRecentDonations(),
-  ]);
+  const window = range ?? resolveTimeframe({ option: DEFAULT_TIMEFRAME }).range;
 
-  return { summary, monthly, scope, cause, mom, recent };
+  const [summary, rangeTotals, trend, scope, cause, mom, recent] =
+    await Promise.all([
+      getDashboardSummary(),
+      getRangeTotals(window),
+      getTrendInRange(window),
+      getScopeBreakdownInRange(window),
+      getCauseBreakdownInRange(window),
+      getMoMComparison(),
+      getRecentDonations(),
+    ]);
+
+  return { summary, range: rangeTotals, trend, scope, cause, mom, recent };
 }

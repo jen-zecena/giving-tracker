@@ -239,6 +239,24 @@ export interface MonthlyTotal {
   total: number;
 }
 
+/**
+ * A single point on the dashboard trend chart. `date` is the bucket's start
+ * (ISO `yyyy-MM-dd` for day/week buckets, or a month's first day); `label`
+ * is a pre-formatted axis label chosen for the current granularity.
+ */
+export interface TrendPoint {
+  date: string;
+  label: string;
+  total: number;
+}
+
+/** Timeframe-scoped headline totals shown on the metric cards. */
+export interface RangeTotals {
+  total: number;
+  count: number;
+  organizations: number;
+}
+
 export interface ScopeBreakdown {
   scope: DonationScope;
   total: number;
@@ -259,7 +277,10 @@ export interface MoMComparison {
 
 export interface DashboardData {
   summary: DashboardSummary;
-  monthly: MonthlyTotal[];
+  /** Timeframe-scoped totals for the headline metric cards. */
+  range: RangeTotals;
+  /** Timeframe-scoped trend series (granularity varies with span). */
+  trend: TrendPoint[];
   scope: ScopeBreakdown[];
   cause: CauseBreakdown[];
   mom: MoMComparison;

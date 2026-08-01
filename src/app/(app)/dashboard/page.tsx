@@ -17,12 +17,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { WelcomeChecklist } from "@/components/welcome-checklist";
 
+import {
+  parseTimeframeParams,
+  resolveTimeframe,
+} from "@/lib/dashboard-timeframe";
 import { getDashboardData } from "@/lib/queries/dashboard";
 import { getChecklistStatus } from "@/lib/queries/welcome-checklist";
 import type { CauseBreakdown, Donation, MoMComparison } from "@/types";
 
 import { MetricCards } from "./metric-cards";
-import { MonthlyChart, ScopeChart } from "./charts";
+import { TrendChart, ScopeChart } from "./charts";
+import { TimeframeSelector } from "./timeframe-selector";
 
 // ── Constants ─────────────────────────────────────────────
 
@@ -51,9 +56,16 @@ function formatCurrency(amount: number): string {
 
 // ── Page ──────────────────────────────────────────────────
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const timeframe = parseTimeframeParams(await searchParams);
+  const resolved = resolveTimeframe(timeframe);
+
   const [data, checklistStatus] = await Promise.all([
-    getDashboardData(),
+    getDashboardData(resolved.range),
     getChecklistStatus(),
   ]);
   const isEmpty = data.summary.ytd_count === 0 && data.recent.length === 0;
@@ -76,10 +88,22 @@ export default async function DashboardPage() {
               <PendingDonationsBanner count={data.summary.pending_count} />
             )}
 
+            {/* Timeframe toolbar — scopes totals, trend, scope & cause */}
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">
+                Showing totals and breakdowns for the selected timeframe.
+              </p>
+              <TimeframeSelector
+                option={resolved.option}
+                from={resolved.from}
+                to={resolved.to}
+              />
+            </div>
+
             {/* Metric Cards */}
             <MetricCards
-              ytdTotal={data.summary.ytd_total}
-              organizationsCount={data.summary.organizations_count}
+              ytdTotal={data.range.total}
+              organizationsCount={data.range.organizations}
               thisMonthTotal={data.summary.this_month_total}
               streakMonths={data.summary.streak_current}
             />
@@ -88,13 +112,13 @@ export default async function DashboardPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Main Charts */}
               <div className="lg:col-span-2 space-y-6">
-                <MonthlyChart data={data.monthly} />
+                <TrendChart data={data.trend} />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <ScopeChart data={data.scope} />
                   <CauseBreakdownCard
                     data={data.cause}
-                    ytdTotal={data.summary.ytd_total}
+                    ytdTotal={data.range.total}
                   />
                 </div>
               </div>
@@ -167,7 +191,7 @@ function CauseBreakdownCard({
         <CardTitle className="text-base font-medium">By Cause</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {top6.map((cause, i) => {
+        {top6.map((cause) => {
           const pct = ytdTotal > 0 ? (cause.total / ytdTotal) * 100 : 0;
           return (
             <div key={cause.cause_tag} className="space-y-1">
