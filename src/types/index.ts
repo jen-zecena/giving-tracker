@@ -177,6 +177,7 @@ export interface Nonprofit {
   donation_url: string | null;
   verified: boolean;
   logo_url: string | null;
+  cover_image_url: string | null;
   description: string | null;
   founded: number | null;
   size: string | null;

@@ -182,6 +182,8 @@ export function mapSearchResultToNonprofit(r: EveryOrgSearchResult): Nonprofit {
     location: parseLocation(r.location),
     website: r.websiteUrl ?? r.profileUrl,
     donationUrl: r.profileUrl,
+    logoUrl: pickLogoUrl(r.logoUrl, r.logoCloudinaryId),
+    coverImageUrl: pickCoverUrl(r.coverImageUrl, r.coverImageCloudinaryId),
     verified: true,
     flagged: false,
     flagCount: 0,
@@ -210,11 +212,66 @@ export function mapDetailToNonprofit(raw: EveryOrgDetailResponse): Nonprofit {
     location: parseLocation(n.locationAddress ?? undefined),
     website: n.websiteUrl ?? n.profileUrl,
     donationUrl: n.profileUrl,
+    logoUrl: pickLogoUrl(undefined, n.logoCloudinaryId),
+    coverImageUrl: pickCoverUrl(undefined, n.coverImageCloudinaryId),
     verified: true,
     flagged: false,
     flagCount: 0,
     ratings: [],
   };
+}
+
+/**
+ * Cloudinary transform presets per image kind. Picked once here so
+ * individual call-sites don't each invent their own (and end up with
+ * mismatched sizing or aspect ratios).
+ *
+ * - `logo`  — square crop, 120px @ 2x for retina (240px source).
+ * - `cover` — 16:9 crop, ~640px wide @ 2x. Banner-friendly.
+ *
+ * The transforms mirror what Every.org uses on their own profiles:
+ * `c_lfill` (limit-fit-fill) preserves the subject without zooming
+ * past native resolution; `q_auto,f_auto,fl_progressive` lets the CDN
+ * pick the best codec (WebP/AVIF) for the requesting browser.
+ */
+const CLOUDINARY_TRANSFORMS = {
+  logo: "c_lfill,w_120,h_120,dpr_2/c_crop,ar_1:1/q_auto,f_auto,fl_progressive",
+  cover: "c_lfill,w_640,h_360,dpr_2/c_crop,ar_16:9/q_auto,f_auto,fl_progressive",
+} as const;
+
+export type EveryOrgImageKind = keyof typeof CLOUDINARY_TRANSFORMS;
+
+/**
+ * Resolve a usable image URL from Every.org's two representations:
+ * either a fully-formed URL (search endpoint sometimes returns one for
+ * logos / covers) or a Cloudinary id (detail endpoint always returns
+ * the id form). Returns `null` when both are absent so the renderer
+ * can fall back to a placeholder surface.
+ */
+export function buildEveryOrgImageUrl(
+  explicitUrl: string | undefined,
+  cloudinaryId: string | null | undefined,
+  kind: EveryOrgImageKind,
+): string | null {
+  if (explicitUrl && explicitUrl.trim().length > 0) return explicitUrl;
+  if (!cloudinaryId || cloudinaryId.trim().length === 0) return null;
+  return `https://res.cloudinary.com/everydotorg/image/upload/${CLOUDINARY_TRANSFORMS[kind]}/${cloudinaryId}`;
+}
+
+/** Backwards-compatible alias for the logo case (kept for existing imports). */
+export function pickLogoUrl(
+  explicitUrl: string | undefined,
+  cloudinaryId: string | null | undefined,
+): string | null {
+  return buildEveryOrgImageUrl(explicitUrl, cloudinaryId, "logo");
+}
+
+/** Cover-image counterpart, used by the directory cards + detail header banner. */
+export function pickCoverUrl(
+  explicitUrl: string | undefined,
+  cloudinaryId: string | null | undefined,
+): string | null {
+  return buildEveryOrgImageUrl(explicitUrl, cloudinaryId, "cover");
 }
 
 // ── Internals ─────────────────────────────────────────────────────────

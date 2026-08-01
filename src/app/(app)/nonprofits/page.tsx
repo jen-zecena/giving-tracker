@@ -1,24 +1,30 @@
 import { PageHeader } from "@/components/nav/page-header";
-import {
-  MOCK_NONPROFITS,
-  NONPROFIT_CATEGORIES,
-} from "@/lib/fixtures/nonprofits";
+import { listNonprofits } from "@/lib/queries/nonprofits";
 
 import { NonprofitsClient } from "./nonprofits-client";
 
-export default function NonprofitsPage() {
+/**
+ * Directory landing — server-renders the most recently synced rows so
+ * the page is non-empty on first load. Subsequent searches run live
+ * against Every.org via the `syncNonprofitsFromSearch` action and
+ * upsert into the same table.
+ */
+export default async function NonprofitsPage() {
+  const initial = await listNonprofits();
+
   return (
     <>
       <PageHeader
         title="Nonprofit Directory"
-        subtitle={`${MOCK_NONPROFITS.length} verified organizations`}
+        subtitle={
+          initial.length === 0
+            ? "Search for an organization to get started"
+            : `${initial.length} verified organizations`
+        }
         showAddButton={false}
       />
       <div className="p-4 sm:p-6 lg:p-8">
-        <NonprofitsClient
-          nonprofits={MOCK_NONPROFITS}
-          categories={[...NONPROFIT_CATEGORIES]}
-        />
+        <NonprofitsClient initial={initial} />
       </div>
     </>
   );
