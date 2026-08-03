@@ -3,22 +3,26 @@
 @import "shadcn/tailwind.css";
 
 /*
- * Design tokens sourced from the Figma Make project
- * "Charitable-Donations-Tracker" (file YLPPnOcPAkDqwZcB4PKwHe), src/styles/theme.css.
+ * Design tokens sourced from the "Giving Tracker Design System" — the warm
+ * earth-tone system (forest green / sand / warm ink) exported from the
+ * claude.ai/design project 0fa4b6fc. It supersedes both the Figma Make palette
+ * (DP-001) and the SnowUI retheme (PR #157, closed unmerged).
  *
- * Light mode only for the Figma Make port. Dark mode is a post-port follow-up
- * initiative — see FIGMA_PORT_PLAN.md §10 and issue DP-075. The `@custom-variant
- * dark` declaration is intentionally retained so shadcn components using `dark:`
- * prefixes still compile — they just have no runtime effect until a real dark
- * palette is defined.
+ * Reference: tokens/*.css in the design system export. Values here are a 1:1
+ * port, remapped onto the shadcn token names the app already consumes.
+ *
+ * Light-only by decision (2026-08-02): the system defines no dark palette, so
+ * none is invented here. The `@custom-variant dark` declaration is retained
+ * only so any `dark:` prefixes still compile; they have no runtime effect.
  */
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: var(--font-inter);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-inter);
+  --font-sans: var(--font-figtree);
+  --font-mono: var(--font-plex-mono);
+  --font-heading: var(--font-figtree);
+  --font-display: var(--font-instrument-serif);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -42,21 +46,51 @@
   --color-switch-background: var(--switch-background);
   --color-ring: var(--ring);
 
+  /* DS surfaces + text tones */
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-inverse: var(--surface-inverse);
+  --color-text-strong: var(--text-strong);
+  --color-text-faint: var(--text-faint);
+  --color-border-strong: var(--border-strong);
+
+  /* DS brand tints */
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-soft-hover: var(--brand-soft-hover);
+  --color-green-700: var(--green-700);
+  --color-green-900: var(--green-900);
+
+  /* DS accent hues */
+  --color-clay: var(--clay-500);
+  --color-clay-soft: var(--clay-50);
+  --color-honey: var(--honey-500);
+  --color-honey-soft: var(--honey-50);
+  --color-berry: var(--berry-500);
+  --color-berry-soft: var(--berry-50);
+
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
 
+  /* Metric card tints (legacy names kept so existing KPI cards restyle
+     without edits; -purple/-yellow/-red map to the nearest warm tint) */
   --color-metric-purple: var(--metric-purple);
   --color-metric-blue: var(--metric-blue);
   --color-metric-green: var(--metric-green);
   --color-metric-yellow: var(--metric-yellow);
   --color-metric-red: var(--metric-red);
+  --color-metric-clay: var(--metric-clay);
+  --color-metric-honey: var(--metric-honey);
 
   --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
   --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
 
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
@@ -67,95 +101,160 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
+  /* DS radii: 8 / 10 / 12 (base — buttons, inputs) / 16 (cards) / 22 / pill */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 10px);
+
+  /* Warm ink-tinted shadows (never black) — rethemes Tailwind shadow-* */
+  --shadow-2xs: var(--shadow-hairline);
+  --shadow-xs: 0 1px 2px rgba(47, 40, 28, 0.06);
+  --shadow-sm: 0 1px 3px rgba(47, 40, 28, 0.08), 0 1px 2px -1px rgba(47, 40, 28, 0.06);
+  --shadow-md: 0 4px 12px -2px rgba(47, 40, 28, 0.1);
+  --shadow-lg: 0 12px 32px -8px rgba(47, 40, 28, 0.14);
 }
 
 /*
- * Figma spacing scale is exposed as :root CSS custom properties (--space-xs..2xl)
- * and can be referenced directly via `var(--space-md)` or arbitrary Tailwind values
- * like `p-[var(--space-md)]`. It is deliberately NOT registered under @theme inline
- * as --spacing-*, because in Tailwind v4 the --spacing-* scale is shared between
- * spacing utilities (p-*, m-*, gap-*) AND sizing utilities (w-*, h-*, max-w-*).
- * Overriding --spacing-sm would make max-w-sm resolve to 0.5rem instead of 24rem.
+ * Figma spacing scale stays exposed as :root custom properties (--space-*)
+ * — deliberately NOT registered as --spacing-* (see DP-001 note: it would
+ * corrupt Tailwind's shared spacing/sizing scale, e.g. max-w-sm).
  */
 
 :root {
-  /* Type scale */
+  /* Type scale — DS body default is 15px on a 16px root */
   --font-size: 16px;
   --font-weight-normal: 400;
   --font-weight-medium: 500;
 
-  /* Core surface + text */
-  --background: #f7f9fb;
-  --foreground: #111827;
+  /* ── Raw DS palette (subset used by semantic aliases below) ── */
+  --sand-50: #fbf8f3;
+  --sand-100: #f5f0e8;
+  --sand-200: #e9e2d6;
+  --sand-300: #d8cebe;
+  --stone-400: #a79e8f;
+  --stone-500: #7c7367;
+  --ink-800: #33302a;
+  --ink-900: #1f1d19;
+  --green-50: #eaf2ec;
+  --green-100: #d3e5d8;
+  --green-500: #3f8560;
+  --green-600: #2e6b4e;
+  --green-700: #23543d;
+  --green-900: #14301f;
+  --blue-50: #e8f0f4;
+  --blue-500: #3d7f9d;
+  --blue-600: #2f6580;
+  --clay-50: #fbefe8;
+  --clay-500: #c4693f;
+  --honey-50: #fbf0da;
+  --honey-500: #d99a2b;
+  --honey-600: #b87d18;
+  --berry-50: #faeae7;
+  --berry-500: #b24a3c;
+
+  /* ── Core surface + text ── */
+  --background: var(--sand-50);
+  --foreground: var(--ink-800);
   --card: #ffffff;
-  --card-foreground: #111827;
+  --card-foreground: var(--ink-800);
   --popover: #ffffff;
-  --popover-foreground: #111827;
+  --popover-foreground: var(--ink-800);
+  --surface-sunken: var(--sand-100);
+  --surface-inverse: var(--green-900);
+  --text-strong: var(--ink-900);
+  --text-faint: var(--stone-400);
 
-  /* Brand */
-  --primary: #5b5bdb;
+  /* ── Brand ── */
+  --primary: var(--green-600);
   --primary-foreground: #ffffff;
-  --secondary: #eef2ff;
-  --secondary-foreground: #111827;
-  --muted: #f3f4f6;
-  --muted-foreground: #6b7280;
-  --accent: #e9e7fd;
-  --accent-foreground: #111827;
+  --brand: var(--green-600);
+  --brand-hover: var(--green-700);
+  --brand-soft: var(--green-50);
+  --brand-soft-hover: var(--green-100);
+  --secondary: var(--green-50);
+  --secondary-foreground: var(--green-700);
+  --muted: var(--sand-100);
+  --muted-foreground: var(--stone-500);
+  --accent: var(--sand-100);
+  --accent-foreground: var(--ink-900);
 
-  /* Feedback */
-  --destructive: #ef4444;
+  /* ── Feedback ── */
+  --destructive: var(--berry-500);
   --destructive-foreground: #ffffff;
 
-  /* Form + control */
-  --border: #e5e7eb;
+  /* ── Form + control ── */
+  --border: var(--sand-200);
+  --border-strong: var(--sand-300);
   --input: transparent;
-  --input-background: #f9fafb;
-  --switch-background: #cbced4;
-  --ring: #5b5bdb;
+  --input-background: #ffffff;
+  --switch-background: var(--sand-300);
+  --ring: var(--green-500);
 
-  /* Chart palette */
-  --chart-1: #5b5bdb;
-  --chart-2: #8b5cf6;
-  --chart-3: #10b981;
-  --chart-4: #f59e0b;
-  --chart-5: #ef4444;
+  /* ── Chart palette ── */
+  --chart-1: var(--green-600);
+  --chart-2: var(--blue-500);
+  --chart-3: var(--clay-500);
+  --chart-4: var(--honey-500);
+  --chart-5: var(--stone-400);
 
-  /* Metric card pastels (used by dashboard KPI cards) */
-  --metric-purple: #e9e7fd;
-  --metric-blue: #eef2ff;
-  --metric-green: #d1fae5;
-  --metric-yellow: #fef3c7;
-  --metric-red: #fee2e2;
+  /* ── Metric card tints ── */
+  --metric-green: #e4f0e7;
+  --metric-blue: #e4eef3;
+  --metric-clay: #f8ede5;
+  --metric-honey: #faf0db;
+  /* legacy aliases → nearest warm tint */
+  --metric-purple: #e4eef3;
+  --metric-yellow: #faf0db;
+  --metric-red: var(--berry-50);
 
-  /* Semantic colors */
-  --success: #10b981;
-  --warning: #f59e0b;
-  --info: #3b82f6;
+  /* ── Semantic colors ── */
+  --success: var(--green-500);
+  --success-soft: var(--green-50);
+  --warning: var(--honey-600);
+  --warning-soft: var(--honey-50);
+  --info: var(--blue-500);
+  --info-soft: var(--blue-50);
 
-  /* Spacing scale */
+  /* ── Spacing scale ── */
+  --space-2xs: 0.125rem;
   --space-xs: 0.25rem;
   --space-sm: 0.5rem;
   --space-md: 1rem;
   --space-lg: 1.5rem;
   --space-xl: 2rem;
   --space-2xl: 3rem;
+  --space-3xl: 4rem;
 
-  /* Radius */
+  /* ── Layout ── */
+  --layout-sidebar: 260px;
+  --layout-max: 1180px;
+  --layout-gutter: 2rem;
+
+  /* ── Radius (12px base; cards use --radius-xl = 16px) ── */
   --radius: 0.75rem;
 
-  /* Sidebar */
-  --sidebar: #ffffff;
-  --sidebar-foreground: #111827;
-  --sidebar-primary: #5b5bdb;
+  /* ── Elevation extras ── */
+  --shadow-hairline: inset 0 0 0 1px rgba(31, 29, 25, 0.08);
+  --focus-ring: color-mix(in oklch, var(--green-500) 40%, transparent);
+
+  /* ── Motion ── */
+  --ease-standard: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+
+  /* ── Sidebar (sand, no white bar — cards float, chrome doesn't) ── */
+  --sidebar: var(--sand-50);
+  --sidebar-foreground: var(--ink-800);
+  --sidebar-primary: var(--green-600);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f9fafb;
-  --sidebar-accent-foreground: #111827;
-  --sidebar-border: #e5e7eb;
-  --sidebar-ring: #5b5bdb;
+  --sidebar-accent: var(--green-50);
+  --sidebar-accent-foreground: var(--green-700);
+  --sidebar-border: var(--sand-200);
+  --sidebar-ring: var(--green-500);
 }
 
 @layer base {
@@ -168,5 +267,18 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* DS default UI text is 15px with 1.5 leading */
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  h1, h2, h3, h4 {
+    color: var(--text-strong);
+    letter-spacing: -0.02em;
+  }
+  .tabular {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
   }
 }

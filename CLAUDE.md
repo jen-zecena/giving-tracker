@@ -70,12 +70,13 @@ GitHub project: "Giving Tracker" (project number 2, owner jen-zecena). Use `gh` 
 - If no reference image: design from scratch using shadcn/ui components and the guardrails below.
 - Screenshot your output with `agent-browser`, compare against reference, fix mismatches, re-screenshot. Do at least 2 comparison rounds.
 
-### Figma Make Source (canonical reference for ports)
-- **Figma Make project:** `Charitable-Donations-Tracker` — https://www.figma.com/make/YLPPnOcPAkDqwZcB4PKwHe/Charitable-Donations-Tracker
-- **File key:** `YLPPnOcPAkDqwZcB4PKwHe`
-- **Pull via MCP (preferred, always current):** call `mcp__figma__get_design_context` with `fileKey: "YLPPnOcPAkDqwZcB4PKwHe"` and `nodeId: "0:1"` to list resources, then `mcp__figma__ReadMcpResourceTool` (server `figma`) with the returned `file://figma/make/source/...` URIs to read individual pages/components/styles. First run in a new session will prompt for Figma OAuth — complete it once and every worktree in the session can read from the project.
-- **Offline mirror (partial):** A local snapshot of frequently referenced pages lives at `~/Projects/giving-tracker-figma-source/` (not checked in). Treat the MCP as canonical — the mirror is only for grep / offline reading, not guaranteed current.
-- **When porting a page:** pull the matching `src/app/pages/*.tsx` via MCP, match its layout/spacing/copy, and map its literal `blue-*`/`purple-*`/`green-*` Tailwind colors onto our theme tokens (`--primary`, `--accent`, `--success`, `--info`, `--metric-*`) per the Design Guardrails below. Don't improve the design — match it.
+### Design System (canonical)
+- **The canonical design reference is the "Giving Tracker Design System"** — the warm earth-tone system (forest green `#2e6b4e` primary, sand `#fbf8f3` page, warm ink text; clay/honey/slate-blue accents; berry destructive). Local export: `~/Downloads/Giving Tracker Design System` (claude.ai/design project `0fa4b6fc-7e42-4981-900a-e39eba6a0af7`). It supersedes both the Figma Make palette and the SnowUI retheme (PR #157, closed).
+- **`src/app/globals.css` is the source of truth for token values** — a 1:1 port of the DS `tokens/*.css`, remapped onto the shadcn token names.
+- **Layout DNA:** 260px sand sidebar + sticky top bar (breadcrumbs, notifications, account menu — no global search yet); content max 1180px; white cards (16px radius, hairline ring + warm ink-tinted shadow) floating on sand — no full-width white bars. Flat colour backgrounds; the only gradients allowed are the Overview sand-to-green band and the green→blue wash behind cover-less nonprofit cards.
+- **When porting a screen:** read the matching screen in the DS `ui_kits/giving-tracker-app/Screens.jsx` and its README first — layout, spacing, and copy come from there. Don't improve the design — match it.
+- **IA decisions (2026-08-02):** Discover is folded into Feed (no sidebar item; reached via "Find people"); Goals lives in Settings → "Goals & income"; Recurring is a tab inside My giving; copy renames "Badges" → "Milestones" and feed "likes" → "cheers" (routes unchanged).
+- **Historical:** the Figma Make project (`Charitable-Donations-Tracker`, file `YLPPnOcPAkDqwZcB4PKwHe`) remains the original structural source the app was ported from — consult only for pre-redesign history, not for new styling.
 
 ### Dev Server & Screenshots
 - Dev server: `npm run dev` (serves at `http://localhost:3000`). Start in background before any screenshots.
@@ -90,14 +91,15 @@ GitHub project: "Giving Tracker" (project number 2, owner jen-zecena). Use `gh` 
 - Responsive and mobile-first.
 
 ### Typography
-- **Body/UI text:** Inter (`font-sans`).
-- **Code, metrics, IDs, timestamps:** Geist Mono (`font-mono`).
-- Apply tight tracking (`tracking-tight`) on large headings, generous line-height on body text.
-- Do not introduce additional font families without explicit approval.
+- **Body/UI text:** Figtree (`font-sans`) — 400 body, 500 labels, 600 headings and actions. Default UI size is 15px.
+- **Every number** (amounts, percentages, dates, EINs, counts, streaks): IBM Plex Mono (`font-mono`), tabular.
+- **Marketing display / pull-quotes only:** Instrument Serif (`font-display`) — never in app chrome.
+- Headings run tight (`tracking-tight`, −0.02em); body runs 1.5 line-height. Sentence case everywhere; the only uppercase is 12px tracked table headers/eyebrows.
+- Do not introduce additional font families without explicit approval. (Supersedes the earlier Inter choice — confirmed 2026-08-02.)
 
 ### Design Guardrails
 - **Colors:** Use the shadcn/ui theme tokens defined in `globals.css` (`--primary`, `--accent`, `--muted`, `--chart-1` through `--chart-5`, etc.). Never hardcode hex/oklch values or use default Tailwind palette colors (indigo-500, blue-600, etc.) directly.
-- **Dark mode:** Dashboard and data-heavy pages should default to dark mode. The `.dark` class on `<html>` activates the dark theme tokens already defined in `globals.css`.
+- **Dark mode:** The app is **light-only** (decision 2026-08-02): the design system defines no dark palette, so don't invent one. Don't add `dark:` styling to new surfaces.
 - **Shadows:** Use shadcn/ui's shadow tokens or layered, low-opacity shadows. Avoid flat `shadow-md` with no thought.
 - **Animations:** Only animate `transform` and `opacity`. Never use `transition-all`. Use subtle easing.
 - **Interactive states:** Every clickable element needs hover, focus-visible, and active states. Use shadcn/ui's built-in states where available.
