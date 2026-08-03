@@ -246,8 +246,8 @@
   --dur-base: 200ms;
   --dur-slow: 320ms;
 
-  /* ── Sidebar (sand, no white bar — cards float, chrome doesn't) ── */
-  --sidebar: var(--sand-50);
+  /* ── Sidebar (white per DS SidebarNav, hairline border-right) ── */
+  --sidebar: #ffffff;
   --sidebar-foreground: var(--ink-800);
   --sidebar-primary: var(--green-600);
   --sidebar-primary-foreground: #ffffff;
