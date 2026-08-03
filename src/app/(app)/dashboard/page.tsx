@@ -1,17 +1,9 @@
 import Link from "next/link";
 import { format } from "date-fns";
-import {
-  Award,
-  Heart,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  ArrowRight,
-  Clock,
-} from "lucide-react";
+import { ArrowRight, Clock, Heart, List, Plus } from "lucide-react";
 
 import { InsightsCard } from "@/components/insights-card";
-import { PageHeader } from "@/components/nav/page-header";
+import { ProgressRing } from "@/components/progress-ring";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -19,10 +11,15 @@ import { WelcomeChecklist } from "@/components/welcome-checklist";
 
 import { getDashboardData } from "@/lib/queries/dashboard";
 import { getChecklistStatus } from "@/lib/queries/welcome-checklist";
-import type { CauseBreakdown, Donation, MoMComparison } from "@/types";
+import { createClient } from "@/lib/supabase/server";
+import type {
+  CauseBreakdown,
+  DashboardSummary,
+  Donation,
+  MoMComparison,
+} from "@/types";
 
-import { MetricCards } from "./metric-cards";
-import { MonthlyChart, ScopeChart } from "./charts";
+import { GivingGrid, MonthlyChart, ScopeDonut } from "./charts";
 
 // ── Constants ─────────────────────────────────────────────
 
@@ -31,10 +28,10 @@ const CAUSE_LABELS: Record<string, string> = {
   health: "Health",
   environment: "Environment",
   poverty: "Poverty",
-  animal_welfare: "Animal Welfare",
-  arts_culture: "Arts & Culture",
-  disaster_relief: "Disaster Relief",
-  human_rights: "Human Rights",
+  animal_welfare: "Animal welfare",
+  arts_culture: "Arts & culture",
+  disaster_relief: "Disaster relief",
+  human_rights: "Human rights",
   community: "Community",
   religious: "Religious",
   uncategorized: "Uncategorized",
@@ -49,49 +46,59 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+function greetingFor(hour: number): string {
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
 // ── Page ──────────────────────────────────────────────────
 
 export default async function DashboardPage() {
-  const [data, checklistStatus] = await Promise.all([
+  const supabase = await createClient();
+  const [data, checklistStatus, { data: auth }] = await Promise.all([
     getDashboardData(),
     getChecklistStatus(),
+    supabase.auth.getUser(),
   ]);
+
+  let firstName: string | null = null;
+  if (auth.user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("display_name")
+      .eq("id", auth.user.id)
+      .single();
+    firstName = profile?.display_name?.split(/\s+/)[0] ?? null;
+  }
+
   const isEmpty = data.summary.ytd_count === 0 && data.recent.length === 0;
 
   return (
-    <>
-      <PageHeader title="Overview" subtitle="Your giving dashboard" />
+    <div>
+      <HeroBand summary={data.summary} firstName={firstName} />
 
-      <div className="p-4 sm:p-6 lg:p-8">
+      <div className="px-4 sm:px-6 lg:px-8 pb-12 space-y-6">
+        <WelcomeChecklist status={checklistStatus} />
+
         {isEmpty ? (
-          <div className="space-y-6">
-            <WelcomeChecklist status={checklistStatus} />
-            <EmptyState />
-          </div>
+          <EmptyState />
         ) : (
-          <div className="space-y-6">
-            <WelcomeChecklist status={checklistStatus} />
-
+          <>
             {data.summary.pending_count > 0 && (
-              <PendingDonationsBanner count={data.summary.pending_count} />
+              <PendingDonationsAlert count={data.summary.pending_count} />
             )}
 
-            {/* Metric Cards */}
-            <MetricCards
-              ytdTotal={data.summary.ytd_total}
-              organizationsCount={data.summary.organizations_count}
-              thisMonthTotal={data.summary.this_month_total}
-              streakMonths={data.summary.streak_current}
-            />
-
-            {/* Charts + Sidebar */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Main Charts */}
-              <div className="lg:col-span-2 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-6 items-start">
+              {/* Main column */}
+              <div className="space-y-6 min-w-0">
                 <MonthlyChart data={data.monthly} />
-
+                <GivingGrid
+                  data={data.monthly}
+                  streakMonths={data.summary.streak_current}
+                />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <ScopeChart data={data.scope} />
+                  <ScopeDonut data={data.scope} />
                   <CauseBreakdownCard
                     data={data.cause}
                     ytdTotal={data.summary.ytd_total}
@@ -99,10 +106,10 @@ export default async function DashboardPage() {
                 </div>
               </div>
 
-              {/* Right Sidebar */}
-              <div className="space-y-6">
+              {/* Side rail */}
+              <div className="space-y-6 min-w-0">
                 <InsightsCard />
-                <MoMCard
+                <QuickStatsCard
                   mom={data.mom}
                   earnedBadges={data.summary.earned_badges_count}
                   totalBadges={data.summary.total_badges_count}
@@ -110,46 +117,199 @@ export default async function DashboardPage() {
                 <RecentActivityCard donations={data.recent} />
               </div>
             </div>
-          </div>
+          </>
         )}
       </div>
-    </>
+    </div>
   );
 }
 
-// ── Pending Donations Banner ──────────────────────────────
+// ── Hero band ─────────────────────────────────────────────
 
-function PendingDonationsBanner({ count }: { count: number }) {
+function HeroBand({
+  summary,
+  firstName,
+}: {
+  summary: DashboardSummary;
+  firstName: string | null;
+}) {
+  const now = new Date();
+  const pct = summary.salary_percentage;
+  const target = summary.salary_milestone_target ?? 1;
+  const goalLine =
+    pct !== null
+      ? pct >= target
+        ? "You've closed the ring this year."
+        : `You're at ${pct.toFixed(2)}% of your ${target}% goal.`
+      : "Here's how your giving is going.";
+
   return (
-    <Card className="border-warning/30 bg-warning/10">
-      <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
-          <div className="rounded-full bg-warning/20 p-2">
-            <Clock className="h-5 w-5 text-warning" aria-hidden />
-          </div>
-          <div>
-            <p className="font-medium text-foreground">
-              You have {count} pending donation{count === 1 ? "" : "s"} to confirm
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Recurring donations wait for your confirmation before they count toward your totals.
-            </p>
-          </div>
+    <div
+      className="px-4 sm:px-6 lg:px-8 pt-6 lg:pt-8 pb-6"
+      style={{
+        background:
+          "linear-gradient(180deg, var(--green-50), var(--sand-50) 88%)",
+      }}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-6 mb-6">
+        <div>
+          <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-text-faint">
+            {format(now, "EEEE, MMMM d · yyyy")}
+          </span>
+          <h1 className="mt-2 text-2xl lg:text-[34px] font-semibold tracking-tight leading-tight">
+            {greetingFor(now.getHours())}
+            {firstName ? `, ${firstName}.` : "."}
+          </h1>
+          <p className="mt-1.5 text-base text-muted-foreground">{goalLine}</p>
         </div>
-        <Button
-          size="sm"
-          render={<Link href="/donations#pending" />}
-          className="shrink-0"
-        >
-          Review
-          <ArrowRight className="h-3 w-3 ml-1" />
-        </Button>
+        <div className="flex gap-2.5">
+          <Button variant="outline" render={<Link href="/donations" />}>
+            <List className="w-[18px] h-[18px]" />
+            History
+          </Button>
+          <Button render={<Link href="/donations/new" />}>
+            <Plus className="w-[18px] h-[18px]" />
+            Log a donation
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[1.35fr_1fr] gap-6 items-stretch">
+        <TotalCard summary={summary} />
+        <GoalRingCard summary={summary} />
+      </div>
+    </div>
+  );
+}
+
+function TotalCard({ summary }: { summary: DashboardSummary }) {
+  const streakSub =
+    summary.streak_current > 0 &&
+    summary.streak_current >= summary.streak_longest
+      ? "Personal best"
+      : "months in a row";
+
+  const stats: [label: string, value: string, sub: string][] = [
+    ["Organizations", String(summary.organizations_count), "this year"],
+    ["This month", formatCurrency(summary.this_month_total), "so far"],
+    ["Streak", `${summary.streak_current} mo`, streakSub],
+  ];
+
+  return (
+    <Card className="grid content-center gap-5">
+      <CardContent>
+        <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-text-faint">
+          Given this year
+        </span>
+        <div className="mt-2 font-mono text-5xl lg:text-[56px] font-semibold tracking-[-0.04em] leading-none text-text-strong">
+          {formatCurrency(summary.ytd_total)}
+        </div>
+      </CardContent>
+      <CardContent>
+        <div className="grid grid-cols-3">
+          {stats.map(([label, value, sub], i) => (
+            <div
+              key={label}
+              className={i > 0 ? "px-5 border-l border-border" : "pr-5"}
+            >
+              <div className="text-xs text-muted-foreground">{label}</div>
+              <div className="mt-1 font-mono text-2xl font-semibold text-text-strong">
+                {value}
+              </div>
+              <div className="text-[11px] text-text-faint">{sub}</div>
+            </div>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );
 }
 
-// ── Cause Breakdown ───────────────────────────────────────
+function GoalRingCard({ summary }: { summary: DashboardSummary }) {
+  const pct = summary.salary_percentage;
+  const target = summary.salary_milestone_target ?? 1;
+
+  return (
+    <Card className="bg-brand-soft ring-brand/15 grid content-center justify-items-center text-center gap-4">
+      <CardContent className="grid justify-items-center gap-4">
+        {pct !== null ? (
+          <>
+            <ProgressRing
+              value={(pct / target) * 100}
+              caption={`${pct.toFixed(2)}%`}
+              sublabel={`of your ${target}% goal`}
+              size={148}
+            />
+            <p className="text-sm text-green-900 max-w-[260px]">
+              {pct >= target
+                ? "The ring is closed — every gift from here is a bonus."
+                : "Keep logging gifts to close the ring this year."}
+            </p>
+            <Button
+              variant="secondary"
+              size="sm"
+              render={<Link href="/badges" />}
+            >
+              See milestones
+            </Button>
+          </>
+        ) : (
+          <>
+            <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-green-700/80">
+              Your 1% goal
+            </span>
+            <p className="text-sm text-green-900 max-w-[280px]">
+              Add your income to see the share you give. It&apos;s encrypted
+              before it&apos;s saved and never shown to anyone.
+            </p>
+            <Button
+              variant="secondary"
+              size="sm"
+              render={<Link href="/goals" />}
+            >
+              Set up your goal
+            </Button>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Pending donations alert ───────────────────────────────
+
+function PendingDonationsAlert({ count }: { count: number }) {
+  return (
+    <div className="flex flex-col gap-3 rounded-xl bg-warning-soft p-4 sm:flex-row sm:items-center sm:justify-between shadow-2xs">
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 inline-flex items-center justify-center w-9 h-9 rounded-md bg-card text-warning shrink-0">
+          <Clock className="h-[18px] w-[18px]" aria-hidden />
+        </span>
+        <div>
+          <p className="font-semibold text-text-strong">
+            {count} recurring gift{count === 1 ? " is" : "s are"} waiting for
+            you
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Recurring donations wait for your confirmation before they count
+            toward your totals.
+          </p>
+        </div>
+      </div>
+      <Button
+        size="sm"
+        variant="outline"
+        render={<Link href="/donations#pending" />}
+        className="shrink-0"
+      >
+        Review
+        <ArrowRight className="h-3 w-3 ml-1" />
+      </Button>
+    </div>
+  );
+}
+
+// ── Cause breakdown ───────────────────────────────────────
 
 function CauseBreakdownCard({
   data,
@@ -164,10 +324,10 @@ function CauseBreakdownCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base font-medium">By Cause</CardTitle>
+        <CardTitle>By cause</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {top6.map((cause, i) => {
+      <CardContent className="space-y-3.5">
+        {top6.map((cause) => {
           const pct = ytdTotal > 0 ? (cause.total / ytdTotal) * 100 : 0;
           return (
             <div key={cause.cause_tag} className="space-y-1">
@@ -179,10 +339,7 @@ function CauseBreakdownCard({
                   {formatCurrency(cause.total)}
                 </span>
               </div>
-              <Progress
-                value={pct}
-                className="h-2"
-              />
+              <Progress value={pct} className="h-2" />
             </div>
           );
         })}
@@ -191,9 +348,9 @@ function CauseBreakdownCard({
   );
 }
 
-// ── MoM Comparison ────────────────────────────────────────
+// ── Quick stats ───────────────────────────────────────────
 
-function MoMCard({
+function QuickStatsCard({
   mom,
   earnedBadges,
   totalBadges,
@@ -202,55 +359,38 @@ function MoMCard({
   earnedBadges: number;
   totalBadges: number;
 }) {
-  const trend =
-    mom.percentage_change === null
-      ? "neutral"
-      : mom.percentage_change > 0
-        ? "up"
-        : mom.percentage_change < 0
-          ? "down"
-          : "neutral";
+  const change = mom.percentage_change;
 
   return (
-    <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+    <Card>
       <CardHeader>
-        <CardTitle className="text-base font-medium">Quick Stats</CardTitle>
+        <CardTitle>Quick stats</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <p className="text-sm text-muted-foreground">This month</p>
-          <p className="text-2xl font-semibold font-mono tracking-tight">
+          <p className="text-xs text-muted-foreground">This month</p>
+          <p className="mt-1 font-mono text-2xl font-semibold tracking-tight text-text-strong">
             {formatCurrency(mom.current_month_total)}
           </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {trend === "up" && (
-            <TrendingUp className="h-4 w-4 text-success" />
-          )}
-          {trend === "down" && (
-            <TrendingDown className="h-4 w-4 text-destructive" />
-          )}
-          {trend === "neutral" && (
-            <Minus className="h-4 w-4 text-muted-foreground" />
-          )}
-          <span className="text-sm text-muted-foreground">
-            {mom.percentage_change !== null
-              ? `${mom.percentage_change > 0 ? "+" : ""}${Math.round(mom.percentage_change)}% vs last month`
+          <p className="text-[11px] text-text-faint font-mono">
+            {change !== null
+              ? `${change > 0 ? "+" : ""}${Math.round(change)}% vs last month`
               : "No data last month"}
-          </span>
+          </p>
         </div>
         <div>
-          <p className="text-sm text-muted-foreground">Last month</p>
-          <p className="text-lg font-medium font-mono">
+          <p className="text-xs text-muted-foreground">Last month</p>
+          <p className="mt-1 font-mono text-lg font-semibold text-text-strong">
             {formatCurrency(mom.previous_month_total)}
           </p>
         </div>
-        <div className="flex items-center gap-2 border-t border-primary/10 pt-3">
-          <Award className="h-4 w-4 text-primary" aria-hidden />
-          <span className="text-sm text-muted-foreground">Badges earned</span>
-          <span className="ml-auto text-sm font-mono font-medium text-foreground">
+        <div className="flex items-center gap-2 border-t border-border pt-3.5 text-sm">
+          <span className="text-muted-foreground">Milestones earned</span>
+          <span className="ml-auto font-mono font-semibold text-text-strong">
             {earnedBadges}
-            <span className="text-muted-foreground">/{totalBadges}</span>
+            <span className="text-muted-foreground font-normal">
+              /{totalBadges}
+            </span>
           </span>
         </div>
       </CardContent>
@@ -258,69 +398,76 @@ function MoMCard({
   );
 }
 
-// ── Recent Activity ───────────────────────────────────────
+// ── Recent activity ───────────────────────────────────────
 
 function RecentActivityCard({ donations }: { donations: Donation[] }) {
   if (donations.length === 0) return null;
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-base font-medium">Recent Activity</CardTitle>
-        <Button
-          variant="ghost"
-          size="sm"
-          render={<Link href="/donations" />}
-          className="text-xs"
-        >
-          View all
-          <ArrowRight className="h-3 w-3 ml-1" />
-        </Button>
+    <Card className="gap-0 pb-2">
+      <CardHeader className="pb-2">
+        <CardTitle>Recent activity</CardTitle>
+        <div className="col-start-2 row-start-1 justify-self-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            render={<Link href="/donations" />}
+            className="text-xs"
+          >
+            View all
+            <ArrowRight className="h-3 w-3 ml-1" />
+          </Button>
+        </div>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {donations.map((d) => (
-          <div key={d.id} className="flex items-start gap-3">
-            <div className="mt-0.5 rounded-full bg-primary/10 p-1.5">
-              <Heart className="h-3 w-3 text-primary" />
-            </div>
+      <div>
+        {donations.map((d, i) => (
+          <div
+            key={d.id}
+            className={`flex items-center gap-3.5 px-6 py-3.5 ${
+              i > 0 ? "border-t border-border" : ""
+            }`}
+          >
+            <span className="inline-flex items-center justify-center w-10 h-10 shrink-0 rounded-md bg-brand-soft text-brand">
+              <Heart className="h-[18px] w-[18px]" aria-hidden />
+            </span>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">
+              <p className="text-sm font-semibold text-text-strong truncate">
                 {d.organization_name}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="font-mono text-xs text-text-faint">
                 {format(new Date(d.donation_date + "T00:00:00"), "MMM d, yyyy")}
               </p>
             </div>
-            <span className="text-sm font-mono font-medium text-foreground shrink-0">
+            <span className="font-mono text-[15px] font-semibold text-text-strong tabular-nums shrink-0">
               {formatCurrency(Number(d.amount))}
             </span>
           </div>
         ))}
-      </CardContent>
+      </div>
     </Card>
   );
 }
 
-// ── Empty State ───────────────────────────────────────────
+// ── Empty state ───────────────────────────────────────────
 
 function EmptyState() {
   return (
-    <Card className="border-dashed">
-      <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="rounded-full bg-primary/10 p-4 mb-4">
-          <Heart className="h-8 w-8 text-primary" />
-        </div>
-        <h2 className="text-xl font-semibold text-foreground mb-2">
-          Welcome to your giving dashboard
+    <div className="rounded-xl border-2 border-dashed border-border-strong bg-transparent">
+      <div className="flex flex-col items-center justify-center py-16 text-center px-6">
+        <span className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-brand-soft text-brand mb-4">
+          <Heart className="h-6 w-6" aria-hidden />
+        </span>
+        <h2 className="text-xl font-semibold text-text-strong mb-2">
+          Start your giving record
         </h2>
         <p className="text-sm text-muted-foreground max-w-md mb-6">
-          Start tracking your charitable giving to see insights, trends, and the
-          impact of your generosity over time.
+          Log your first donation to see trends, streaks, and the causes you
+          care about take shape here.
         </p>
         <Button render={<Link href="/donations/new" />} size="lg">
           Log your first donation
         </Button>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
