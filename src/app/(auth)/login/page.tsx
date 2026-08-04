@@ -2,18 +2,11 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Heart } from "lucide-react";
+import { AuthSplit } from "@/components/auth/auth-split";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { signIn, forgotPassword, type AuthResult } from "@/lib/actions/auth";
 
 export default function LoginPage() {
@@ -40,17 +33,16 @@ export default function LoginPage() {
 
   if (showForgot) {
     return (
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-            <Heart className="h-5 w-5 text-primary" />
+      <AuthSplit>
+        <div className="grid gap-5">
+          <div>
+            <h1 className="text-[32px] font-semibold tracking-tight">
+              Reset password
+            </h1>
+            <p className="mt-2 text-base text-muted-foreground">
+              Enter your email and we&apos;ll send a reset link.
+            </p>
           </div>
-          <CardTitle className="text-xl">Reset password</CardTitle>
-          <CardDescription>
-            Enter your email and we&apos;ll send a reset link
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
           <form action={handleForgotPassword} className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
@@ -68,39 +60,41 @@ export default function LoginPage() {
               <p className="text-sm text-destructive">{result.error}</p>
             )}
             {result?.success && (
-              <p className="text-sm text-accent">{result.success}</p>
+              <p className="text-sm text-success">{result.success}</p>
             )}
 
-            <Button type="submit" className="w-full" disabled={pending}>
+            <Button type="submit" size="lg" className="w-full" disabled={pending}>
               {pending ? "Sending..." : "Send reset link"}
             </Button>
           </form>
-        </CardContent>
-        <CardFooter className="justify-center">
-          <button
-            onClick={() => {
-              setShowForgot(false);
-              setResult(null);
-            }}
-            className="text-sm text-primary hover:underline focus-visible:underline focus-visible:outline-none"
-          >
-            Back to sign in
-          </button>
-        </CardFooter>
-      </Card>
+          <Separator />
+          <p className="text-center text-sm text-muted-foreground">
+            <button
+              onClick={() => {
+                setShowForgot(false);
+                setResult(null);
+              }}
+              className="text-brand hover:underline focus-visible:underline focus-visible:outline-none"
+            >
+              Back to sign in
+            </button>
+          </p>
+        </div>
+      </AuthSplit>
     );
   }
 
   return (
-    <Card className="w-full max-w-sm">
-      <CardHeader className="text-center">
-        <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-          <Heart className="h-5 w-5 text-primary" />
+    <AuthSplit>
+      <div className="grid gap-5">
+        <div>
+          <h1 className="text-[32px] font-semibold tracking-tight">
+            Welcome back
+          </h1>
+          <p className="mt-2 text-base text-muted-foreground">
+            Pick up where your log left off.
+          </p>
         </div>
-        <CardTitle className="text-xl">Welcome back</CardTitle>
-        <CardDescription>Sign in to your account</CardDescription>
-      </CardHeader>
-      <CardContent>
         <form action={handleSignIn} className="grid gap-4">
           <div className="grid gap-2">
             <Label htmlFor="email">Email</Label>
@@ -122,7 +116,7 @@ export default function LoginPage() {
                   setShowForgot(true);
                   setResult(null);
                 }}
-                className="text-xs text-muted-foreground hover:text-primary hover:underline focus-visible:text-primary focus-visible:underline focus-visible:outline-none"
+                className="text-xs text-muted-foreground hover:text-brand hover:underline focus-visible:text-brand focus-visible:underline focus-visible:outline-none"
               >
                 Forgot password?
               </button>
@@ -140,19 +134,21 @@ export default function LoginPage() {
             <p className="text-sm text-destructive">{result.error}</p>
           )}
 
-          <Button type="submit" className="w-full" disabled={pending}>
+          <Button type="submit" size="lg" className="w-full" disabled={pending}>
             {pending ? "Signing in..." : "Sign in"}
           </Button>
         </form>
-      </CardContent>
-      <CardFooter className="justify-center">
-        <p className="text-sm text-muted-foreground">
-          Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-primary hover:underline focus-visible:underline focus-visible:outline-none">
-            Create one
+        <Separator />
+        <p className="text-center text-sm text-muted-foreground">
+          New here?{" "}
+          <Link
+            href="/register"
+            className="text-brand hover:underline focus-visible:underline focus-visible:outline-none"
+          >
+            Create an account
           </Link>
         </p>
-      </CardFooter>
-    </Card>
+      </div>
+    </AuthSplit>
   );
 }

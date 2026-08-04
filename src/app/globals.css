@@ -188,7 +188,8 @@
   /* ── Form + control ── */
   --border: var(--sand-200);
   --border-strong: var(--sand-300);
-  --input: transparent;
+  /* DS inputs: white surface with a border-strong (sand-300) outline */
+  --input: var(--sand-300);
   --input-background: #ffffff;
   --switch-background: var(--sand-300);
   --ring: var(--green-500);
