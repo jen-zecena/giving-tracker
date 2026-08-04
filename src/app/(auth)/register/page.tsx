@@ -2,18 +2,11 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Heart } from "lucide-react";
+import { AuthSplit } from "@/components/auth/auth-split";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { signUp, type AuthResult } from "@/lib/actions/auth";
 
 export default function RegisterPage() {
@@ -29,15 +22,16 @@ export default function RegisterPage() {
   }
 
   return (
-    <Card className="w-full max-w-sm">
-      <CardHeader className="text-center">
-        <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-          <Heart className="h-5 w-5 text-primary" />
+    <AuthSplit>
+      <div className="grid gap-5">
+        <div>
+          <h1 className="text-[32px] font-semibold tracking-tight">
+            Start your log
+          </h1>
+          <p className="mt-2 text-base text-muted-foreground">
+            One gift is enough to begin.
+          </p>
         </div>
-        <CardTitle className="text-xl">Create account</CardTitle>
-        <CardDescription>Start tracking your charitable giving</CardDescription>
-      </CardHeader>
-      <CardContent>
         <form action={handleSubmit} className="grid gap-4">
           <div className="grid gap-2">
             <Label htmlFor="email">Email</Label>
@@ -79,22 +73,24 @@ export default function RegisterPage() {
             <p className="text-sm text-destructive">{result.error}</p>
           )}
           {result?.success && (
-            <p className="text-sm text-accent">{result.success}</p>
+            <p className="text-sm text-success">{result.success}</p>
           )}
 
-          <Button type="submit" className="w-full" disabled={pending}>
+          <Button type="submit" size="lg" className="w-full" disabled={pending}>
             {pending ? "Creating account..." : "Create account"}
           </Button>
         </form>
-      </CardContent>
-      <CardFooter className="justify-center">
-        <p className="text-sm text-muted-foreground">
+        <Separator />
+        <p className="text-center text-sm text-muted-foreground">
           Already have an account?{" "}
-          <Link href="/login" className="text-primary hover:underline focus-visible:underline focus-visible:outline-none">
+          <Link
+            href="/login"
+            className="text-brand hover:underline focus-visible:underline focus-visible:outline-none"
+          >
             Sign in
           </Link>
         </p>
-      </CardFooter>
-    </Card>
+      </div>
+    </AuthSplit>
   );
 }

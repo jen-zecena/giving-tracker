@@ -3,9 +3,7 @@ export default function AuthLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div className="flex min-h-full items-center justify-center p-4">
-      {children}
-    </div>
-  );
+  // Login/register render the full-bleed split screen themselves;
+  // onboarding restores the centered wrapper in its own nested layout.
+  return <>{children}</>;
 }
