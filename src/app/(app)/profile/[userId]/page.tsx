@@ -1,71 +1,30 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import {
-  ArrowLeft,
-  Building2,
-  EyeOff,
-  Heart,
-  Lock,
-  Repeat,
-  Users,
-} from "lucide-react";
+import { ArrowLeft, Heart, Lock, Users } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/empty-state";
-import { PageHeader } from "@/components/nav/page-header";
-import { privacyTierMeta } from "@/lib/privacy-tier";
 import {
   getPublicProfileData,
   type PublicProfileHeader,
   type PublicProfileStats,
-  type PublicRecentDonation,
 } from "@/lib/queries/public-profile";
 import { getPublicFollowButtonState } from "@/lib/queries/public-profile-helpers";
+import { privacyTierMeta } from "@/lib/privacy-tier";
 
+import {
+  AmountPrivate,
+  BioCard,
+  DonationListCard,
+  firstInitial,
+  formatCurrency,
+  GivingSummaryCard,
+  ProfileCover,
+  ProfileIdentity,
+  tierLabel,
+} from "../profile-blocks";
 import { PublicProfileFollowButton } from "./follow-button";
-
-const CAUSE_LABELS: Record<string, string> = {
-  education: "Education",
-  health: "Health",
-  environment: "Environment",
-  poverty: "Poverty",
-  animal_welfare: "Animal Welfare",
-  arts_culture: "Arts & Culture",
-  disaster_relief: "Disaster Relief",
-  human_rights: "Human Rights",
-  community: "Community",
-  religious: "Religious",
-};
-
-const SCOPE_LABELS: Record<string, string> = {
-  local: "Local",
-  national: "National",
-  global: "Global",
-};
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso + "T00:00:00").toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function firstInitial(name: string | null): string {
-  const trimmed = name?.trim();
-  if (!trimmed) return "?";
-  return trimmed.charAt(0).toUpperCase();
-}
 
 export default async function PublicProfilePage({
   params,
@@ -80,37 +39,56 @@ export default async function PublicProfilePage({
   if (data.status === "self") redirect("/profile");
   if (data.status === "not_found") {
     return (
-      <>
-        <PageHeader title="Profile" showAddButton={false} />
-        <div className="mx-auto max-w-3xl p-4 sm:p-6 lg:p-8">
-          <BackLink />
-          <EmptyState
-            icon={Users}
-            title="User not found"
-            description="This profile doesn't exist or has been removed."
-          />
-        </div>
-      </>
+      <div className="mx-auto grid max-w-3xl gap-4 px-4 py-6 sm:px-6 lg:px-8">
+        <BackLink />
+        <EmptyState
+          icon={Users}
+          title="User not found"
+          description="This profile doesn't exist or has been removed."
+        />
+      </div>
     );
   }
 
   if (data.status === "hidden") {
+    const { header, hasPendingRequest } = data;
+    const displayName = header.display_name?.trim() || "Giving Tracker user";
+    const buttonState = getPublicFollowButtonState({
+      tier: header.privacy_tier,
+      isFollowing: false,
+      hasPendingRequest,
+    });
+
     return (
       <>
-        <PageHeader title="Profile" showAddButton={false} />
-        <div className="mx-auto grid max-w-3xl gap-6 p-4 sm:p-6 lg:p-8">
-          <BackLink />
-          <HiddenProfileCard
-            header={data.header}
-            hasPendingRequest={data.hasPendingRequest}
+        <ProfileCover>
+          <CoverBackLink />
+        </ProfileCover>
+        <div className="px-4 sm:px-6 lg:px-8">
+          <ProfileIdentity
+            /* Initials only — the avatar image isn't shown for profiles
+               that are hidden to this viewer (matches today's behavior). */
+            initial={firstInitial(header.display_name)}
+            name={displayName}
+            tier={header.privacy_tier}
+            meta={privacyTierMeta(header.privacy_tier).description}
+            actions={
+              <PublicProfileFollowButton
+                targetUserId={header.user_id}
+                targetName={displayName}
+                initialState={buttonState}
+              />
+            }
           />
+          <div className="mt-6 pb-8">
+            <HiddenProfileCard header={header} />
+          </div>
         </div>
       </>
     );
   }
 
   const { header, stats, recent_donations, viewer } = data;
-  const tierMeta = privacyTierMeta(header.privacy_tier);
   const displayName = header.display_name?.trim() || "Giving Tracker user";
   const buttonState = getPublicFollowButtonState({
     tier: header.privacy_tier,
@@ -120,18 +98,18 @@ export default async function PublicProfilePage({
 
   return (
     <>
-      <PageHeader title="Profile" showAddButton={false} />
+      <ProfileCover>
+        <CoverBackLink />
+      </ProfileCover>
 
-      <div className="mx-auto grid max-w-5xl gap-6 p-4 sm:p-6 lg:p-8">
-        <BackLink />
-
-        <ProfileHeaderCard
+      <div className="px-4 sm:px-6 lg:px-8">
+        <ProfileIdentity
+          avatarUrl={header.avatar_url}
           initial={firstInitial(header.display_name)}
-          displayName={displayName}
-          bio={header.bio}
-          tierLabel={tierMeta.label}
-          tierDescription={tierMeta.description}
-          followControl={
+          name={displayName}
+          tier={header.privacy_tier}
+          meta={privacyTierMeta(header.privacy_tier).description}
+          actions={
             <PublicProfileFollowButton
               targetUserId={header.user_id}
               targetName={displayName}
@@ -140,50 +118,55 @@ export default async function PublicProfilePage({
           }
         />
 
-        <section
-          className="grid gap-4 sm:grid-cols-3"
-          aria-label="Giving summary"
-        >
-          <StatCard
-            label="Total Donated"
-            value={stats.show_amounts ? formatCurrency(stats.total_donated) : "—"}
-            icon={Heart}
-            tone="purple"
-            hint={stats.show_amounts ? undefined : "Hidden by this user"}
-          />
-          <StatCard
-            label="Donations"
-            value={stats.donation_count.toLocaleString("en-US")}
-            icon={Building2}
-            tone="blue"
-            hint={
-              stats.organization_count > 0
-                ? `${stats.organization_count} ${
-                    stats.organization_count === 1
-                      ? "organization"
-                      : "organizations"
-                  }`
-                : undefined
-            }
-          />
-          <StatCard
-            label="Followers"
-            value={stats.follower_count.toLocaleString("en-US")}
-            icon={Users}
-            tone="green"
-          />
-        </section>
+        <div className="mt-6 grid items-start gap-6 pb-8 lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-8">
+          {/* Side column */}
+          <div className="grid gap-4 lg:sticky lg:top-20">
+            <BioCard
+              bio={header.bio}
+              bioFallback="No bio yet."
+              stats={[{ label: "Followers", value: stats.follower_count }]}
+            />
+            <GivingSummaryCard
+              total={
+                stats.show_amounts ? (
+                  formatCurrency(stats.total_donated)
+                ) : (
+                  <AmountPrivate className="text-base font-sans font-normal" />
+                )
+              }
+              donationCount={stats.donation_count}
+              organizationCount={stats.organization_count}
+            />
+          </div>
 
-        <RecentDonationsCard
-          donations={recent_donations}
-          showAmounts={stats.show_amounts}
-        />
+          {/* Main column */}
+          <div className="min-w-0">
+            {recent_donations.length === 0 ? (
+              <EmptyState
+                icon={Heart}
+                title="No public donations yet"
+                description="When this user logs a donation and chooses to share it, it will show up here."
+              />
+            ) : (
+              <DonationListCard
+                title="Recent donations"
+                description={
+                  stats.show_amounts
+                    ? "5 most recent confirmed gifts."
+                    : "5 most recent confirmed gifts. Amounts stay hidden."
+                }
+                donations={recent_donations}
+                showAmounts={stats.show_amounts}
+              />
+            )}
+          </div>
+        </div>
       </div>
     </>
   );
 }
 
-// ── Back link ────────────────────────────────────────────────
+// ── Back links ───────────────────────────────────────────────
 
 function BackLink() {
   return (
@@ -191,223 +174,55 @@ function BackLink() {
       render={<Link href="/discover" />}
       variant="ghost"
       size="sm"
-      className="w-fit -ml-2 text-muted-foreground"
+      className="-ml-2 w-fit text-muted-foreground"
     >
-      <ArrowLeft className="mr-1.5 h-4 w-4" aria-hidden="true" />
+      <ArrowLeft className="h-4 w-4" aria-hidden="true" />
       Back
     </Button>
   );
 }
 
-// ── Header ───────────────────────────────────────────────────
-
-function ProfileHeaderCard({
-  initial,
-  displayName,
-  bio,
-  tierLabel,
-  tierDescription,
-  followControl,
-}: {
-  initial: string;
-  displayName: string;
-  bio: string | null;
-  tierLabel: string;
-  tierDescription: string;
-  followControl: React.ReactNode;
-}) {
+/** Ghost back button overlaid on the cover band. */
+function CoverBackLink() {
   return (
-    <Card className="p-6">
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
-          <div
-            className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-chart-2 font-sans text-3xl font-semibold text-primary-foreground shadow-sm"
-            aria-hidden="true"
-          >
-            {initial}
-          </div>
-          <div className="min-w-0">
-            <h2 className="truncate text-2xl font-semibold tracking-tight">
-              {displayName}
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {bio?.trim() || "No bio yet."}
-            </p>
-            <div className="mt-3 flex items-center gap-2">
-              <Badge variant="secondary">{tierLabel}</Badge>
-              <span className="text-xs text-muted-foreground">
-                {tierDescription}
-              </span>
-            </div>
-          </div>
-        </div>
-        <div className="self-start sm:self-center">{followControl}</div>
-      </div>
-    </Card>
+    <Button
+      render={<Link href="/discover" />}
+      variant="ghost"
+      size="sm"
+      className="absolute top-3 left-3 text-primary-foreground hover:bg-primary-foreground/15 hover:text-primary-foreground active:bg-primary-foreground/25 focus-visible:border-primary-foreground/60 focus-visible:ring-primary-foreground/40"
+    >
+      <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+      Back
+    </Button>
   );
 }
 
-// ── Hidden card ──────────────────────────────────────────────
+// ── Hidden-profile card ──────────────────────────────────────
 
-function HiddenProfileCard({
-  header,
-  hasPendingRequest,
-}: {
-  header: PublicProfileHeader;
-  hasPendingRequest: boolean;
-}) {
+function HiddenProfileCard({ header }: { header: PublicProfileHeader }) {
   const displayName = header.display_name?.trim() || "Giving Tracker user";
-  const tierMeta = privacyTierMeta(header.privacy_tier);
-  const buttonState = getPublicFollowButtonState({
-    tier: header.privacy_tier,
-    isFollowing: false,
-    hasPendingRequest,
-  });
 
   return (
-    <Card className="p-8 text-center">
-      <div
-        className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-muted text-muted-foreground"
+    <Card className="mx-auto w-full max-w-xl p-8 text-center">
+      <span
+        className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand-soft text-brand"
         aria-hidden="true"
       >
-        <Lock className="h-7 w-7" />
-      </div>
-      <h2 className="mt-4 text-xl font-semibold tracking-tight">
-        This profile is private
-      </h2>
-      <p className="mt-2 text-sm text-muted-foreground">
-        {displayName} has a <span className="font-medium">{tierMeta.label}</span>{" "}
-        profile.
-        {header.privacy_tier === "friends_only"
-          ? " Send a follow request to see their giving."
-          : " Their giving is only visible to them."}
-      </p>
-      <div className="mt-6 flex justify-center">
-        <PublicProfileFollowButton
-          targetUserId={header.user_id}
-          targetName={displayName}
-          initialState={buttonState}
-        />
-      </div>
-    </Card>
-  );
-}
-
-// ── Stat card ────────────────────────────────────────────────
-
-type Tone = "purple" | "blue" | "green";
-const TONE_BG: Record<Tone, string> = {
-  purple: "bg-metric-purple",
-  blue: "bg-metric-blue",
-  green: "bg-metric-green",
-};
-
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  tone,
-  hint,
-}: {
-  label: string;
-  value: string;
-  icon: typeof Heart;
-  tone: Tone;
-  hint?: string;
-}) {
-  return (
-    <Card className={`${TONE_BG[tone]} border-transparent p-5`}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-foreground/60">
-            {label}
-          </p>
-          <p className="mt-2 font-mono text-2xl font-semibold tracking-tight">
-            {value}
-          </p>
-          {hint && <p className="mt-1 text-xs text-foreground/60">{hint}</p>}
-        </div>
-        <span
-          className="flex h-9 w-9 items-center justify-center rounded-lg bg-background/70 text-foreground/70"
-          aria-hidden="true"
-        >
-          <Icon className="h-4 w-4" />
-        </span>
-      </div>
-    </Card>
-  );
-}
-
-// ── Recent donations ─────────────────────────────────────────
-
-function RecentDonationsCard({
-  donations,
-  showAmounts,
-}: {
-  donations: PublicRecentDonation[];
-  showAmounts: boolean;
-}) {
-  if (donations.length === 0) {
-    return (
-      <EmptyState
-        icon={Heart}
-        title="No public donations yet"
-        description="When this user logs a donation and chooses to share it, it will show up here."
-      />
-    );
-  }
-
-  return (
-    <Card className="divide-y divide-border overflow-hidden p-0">
-      <div className="px-5 py-4">
-        <h3 className="text-sm font-semibold">Recent donations</h3>
-        <p className="text-xs text-muted-foreground">
-          {showAmounts
-            ? "5 most recent confirmed gifts."
-            : "5 most recent confirmed gifts. Amounts hidden by this user."}
+        <Lock className="h-6 w-6" />
+      </span>
+      <div>
+        <h2 className="text-xl font-semibold tracking-tight">
+          This profile is private
+        </h2>
+        <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+          {displayName} has a{" "}
+          <span className="font-medium">{tierLabel(header.privacy_tier)}</span>{" "}
+          profile.
+          {header.privacy_tier === "friends_only"
+            ? " Send a follow request to see their giving."
+            : " Their giving is only visible to them."}
         </p>
       </div>
-      <ul className="divide-y divide-border">
-        {donations.map((d) => (
-          <li
-            key={d.id}
-            className="flex items-center justify-between gap-3 px-5 py-4"
-          >
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">
-                {d.organization_name}
-              </p>
-              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <span className="font-mono">{formatDate(d.donation_date)}</span>
-                {d.cause_tag && (
-                  <Badge variant="outline" className="font-normal">
-                    {CAUSE_LABELS[d.cause_tag] ?? d.cause_tag}
-                  </Badge>
-                )}
-                <Badge variant="secondary" className="font-normal">
-                  {SCOPE_LABELS[d.scope] ?? d.scope}
-                </Badge>
-                {d.is_recurring && (
-                  <Badge variant="outline" className="gap-1 font-normal">
-                    <Repeat className="h-3 w-3" aria-hidden="true" />
-                    Recurring
-                  </Badge>
-                )}
-              </div>
-            </div>
-            <div className="font-mono text-sm font-semibold">
-              {showAmounts ? (
-                formatCurrency(d.amount)
-              ) : (
-                <span className="inline-flex items-center gap-1 text-muted-foreground">
-                  <EyeOff className="h-3 w-3" aria-hidden="true" />
-                  Hidden
-                </span>
-              )}
-            </div>
-          </li>
-        ))}
-      </ul>
     </Card>
   );
 }
