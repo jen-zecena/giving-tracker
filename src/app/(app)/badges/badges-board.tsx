@@ -14,10 +14,19 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import type { Badge as BadgeData, BadgeCategory } from "@/lib/queries/badges";
+import type { Badge as BadgeData } from "@/lib/queries/badges";
 
-type TabValue = "earned" | "in-progress" | "all";
-type CategoryFilter = "all" | BadgeCategory;
+import {
+  filterBadges,
+  formatEarnedDate,
+  formatProgress,
+  isInProgress,
+  type CategoryFilter,
+  type TabValue,
+} from "./badges-utils";
+
+// Re-exported for tests (tests/badges-board.test.ts) and prior callers.
+export { filterBadges, isInProgress };
 
 const CATEGORY_OPTIONS: { value: CategoryFilter; label: string }[] = [
   { value: "all", label: "All" },
@@ -26,33 +35,6 @@ const CATEGORY_OPTIONS: { value: CategoryFilter; label: string }[] = [
   { value: "cause", label: "Causes" },
   { value: "impact", label: "Impact" },
 ];
-
-export function isInProgress(badge: BadgeData): boolean {
-  if (badge.earned) return false;
-  if (badge.target === undefined) return false;
-  return (badge.progress ?? 0) > 0;
-}
-
-export function filterBadges(
-  badges: BadgeData[],
-  tab: TabValue,
-  category: CategoryFilter
-): BadgeData[] {
-  return badges.filter((b) => {
-    if (category !== "all" && b.category !== category) return false;
-    if (tab === "earned") return b.earned;
-    if (tab === "in-progress") return isInProgress(b);
-    return true;
-  });
-}
-
-function formatEarnedDate(iso: string): string {
-  return new Date(iso + "T00:00:00").toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 export function BadgesBoard({ badges }: { badges: BadgeData[] }) {
   const [tab, setTab] = useState<TabValue>("earned");
@@ -78,41 +60,41 @@ export function BadgesBoard({ badges }: { badges: BadgeData[] }) {
   }, [badges, category]);
 
   return (
-    <div className="space-y-4">
-      {/* Category pills */}
-      <div
-        className="flex flex-wrap gap-2"
-        role="group"
-        aria-label="Filter badges by category"
-      >
-        {CATEGORY_OPTIONS.map((opt) => {
-          const active = category === opt.value;
-          return (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => setCategory(opt.value)}
-              aria-pressed={active}
-              className={cn(
-                "inline-flex h-8 items-center rounded-full border px-3 text-xs font-medium transition-colors",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                active
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background text-foreground/70 hover:bg-muted"
-              )}
-            >
-              {opt.label}
-            </button>
-          );
-        })}
-      </div>
+    <Tabs
+      value={tab}
+      onValueChange={(v) => setTab(v as TabValue)}
+      className="w-full gap-4"
+    >
+      {/* Controls row: category pills left, status tabs right */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div
+          className="flex flex-wrap gap-2"
+          role="group"
+          aria-label="Filter milestones by category"
+        >
+          {CATEGORY_OPTIONS.map((opt) => {
+            const active = category === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setCategory(opt.value)}
+                aria-pressed={active}
+                className={cn(
+                  "inline-flex h-8 items-center rounded-full border px-3.5 text-xs font-semibold transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 active:translate-y-px",
+                  active
+                    ? "border-brand bg-brand-soft text-green-700"
+                    : "border-border-strong bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
 
-      <Tabs
-        value={tab}
-        onValueChange={(v) => setTab(v as TabValue)}
-        className="w-full"
-      >
-        <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:grid-cols-none sm:inline-flex">
+        <TabsList className="max-sm:grid max-sm:w-full max-sm:grid-cols-3">
           <TabsTrigger value="earned">
             Earned
             <span className="ml-1 font-mono text-[10px] text-muted-foreground">
@@ -120,7 +102,7 @@ export function BadgesBoard({ badges }: { badges: BadgeData[] }) {
             </span>
           </TabsTrigger>
           <TabsTrigger value="in-progress">
-            In Progress
+            In progress
             <span className="ml-1 font-mono text-[10px] text-muted-foreground">
               {counts.inProgress}
             </span>
@@ -132,12 +114,12 @@ export function BadgesBoard({ badges }: { badges: BadgeData[] }) {
             </span>
           </TabsTrigger>
         </TabsList>
+      </div>
 
-        <TabsContent value={tab} className="mt-4">
-          <BadgeGrid badges={filtered} tab={tab} />
-        </TabsContent>
-      </Tabs>
-    </div>
+      <TabsContent value={tab}>
+        <BadgeGrid badges={filtered} tab={tab} />
+      </TabsContent>
+    </Tabs>
   );
 }
 
@@ -148,18 +130,19 @@ function BadgeGrid({ badges, tab }: { badges: BadgeData[]; tab: TabValue }) {
         icon={tab === "earned" ? Award : Lock}
         title={
           tab === "earned"
-            ? "No badges earned yet"
+            ? "No milestones earned yet"
             : tab === "in-progress"
               ? "Nothing in progress"
-              : "No badges match this filter"
+              : "No milestones match this filter"
         }
         description={
           tab === "earned"
-            ? "Log donations to start unlocking badges."
+            ? "Log donations to start unlocking milestones."
             : tab === "in-progress"
               ? "Start making progress toward a milestone to see it here."
-              : "Pick a different category to see more badges."
+              : "Pick a different category to see more milestones."
         }
+        className="border-2 border-dashed border-border-strong bg-transparent shadow-none ring-0"
       />
     );
   }
@@ -184,41 +167,31 @@ function BadgeCard({ badge }: { badge: BadgeData }) {
       ? Math.min(100, Math.round(((badge.progress ?? 0) / badge.target) * 100))
       : 0;
 
-  const stateClasses = badge.earned
-    ? "border-success/40 bg-success/10"
-    : inProgress
-      ? "border-chart-1/40 bg-chart-1/5"
-      : "border-border bg-muted/30 opacity-70";
-
   return (
     <Card
       className={cn(
-        "relative flex flex-col gap-3 p-5 transition-colors",
-        stateClasses
+        "gap-3 p-6",
+        badge.earned && "bg-success-soft ring-brand/25",
+        locked && "bg-surface-sunken opacity-85"
       )}
       data-state={badge.earned ? "earned" : inProgress ? "in-progress" : "locked"}
     >
       <div className="flex items-start justify-between gap-3">
-        <div
+        <span
           className={cn(
-            "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl",
+            "flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-2xl",
             badge.earned
-              ? "bg-success/20"
+              ? "bg-brand-soft-hover"
               : inProgress
-                ? "bg-chart-1/10"
-                : "bg-muted"
+                ? "bg-info-soft"
+                : "bg-border"
           )}
           aria-hidden="true"
         >
           <span className={locked ? "grayscale" : undefined}>{badge.icon}</span>
-        </div>
+        </span>
         {badge.earned ? (
-          <Badge
-            variant="secondary"
-            className="bg-success/20 text-success border-success/30"
-          >
-            Earned
-          </Badge>
+          <Badge variant="secondary">Earned</Badge>
         ) : locked ? (
           <Badge variant="outline" className="gap-1 text-muted-foreground">
             <Lock className="h-3 w-3" aria-hidden="true" />
@@ -231,7 +204,7 @@ function BadgeCard({ badge }: { badge: BadgeData }) {
         <h3
           className={cn(
             "text-base font-semibold",
-            locked ? "text-muted-foreground" : "text-foreground"
+            locked ? "text-muted-foreground" : "text-text-strong"
           )}
         >
           {badge.name}
@@ -240,17 +213,20 @@ function BadgeCard({ badge }: { badge: BadgeData }) {
       </div>
 
       {badge.earned && badge.earnedDate && (
-        <p className="font-mono text-xs text-muted-foreground">
+        <p className="font-mono text-xs text-text-faint">
           Earned {formatEarnedDate(badge.earnedDate)}
         </p>
       )}
 
       {!badge.earned && badge.target !== undefined && (
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <Progress
             value={progressPct}
             aria-label={`${progressPct}% progress toward ${badge.name}`}
-            className="h-1.5"
+            className={cn(
+              "[&_[data-slot=progress-track]]:h-1.5",
+              inProgress && "[&_[data-slot=progress-indicator]]:bg-info"
+            )}
           />
           <p className="flex items-center justify-between font-mono text-xs text-muted-foreground">
             <span>
@@ -263,12 +239,4 @@ function BadgeCard({ badge }: { badge: BadgeData }) {
       )}
     </Card>
   );
-}
-
-function formatProgress(n: number, badgeId: string): string {
-  // Salary-percentage badges (*-percent-club) express progress as a %.
-  if (badgeId.endsWith("-percent-club")) {
-    return `${n.toFixed(1)}%`;
-  }
-  return n.toLocaleString("en-US");
 }
