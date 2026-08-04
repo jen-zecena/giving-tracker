@@ -1,7 +1,6 @@
 "use client";
 
 import { useOptimistic, useTransition } from "react";
-import { Heart } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -16,6 +15,11 @@ type Props = {
   initialCount: number;
 };
 
+/**
+ * Cheer toggle (internally still "like" — action + DB names unchanged).
+ * DS treatment: ♡/♥ glyphs, mono count, "Cheer"/"Cheered" label with a
+ * berry tint when active.
+ */
 export function LikeButton({ donationId, initialLiked, initialCount }: Props) {
   const [isPending, startTransition] = useTransition();
   const [state, applyOptimistic] = useOptimistic<LikeState, LikeState>(
@@ -41,7 +45,7 @@ export function LikeButton({ donationId, initialLiked, initialCount }: Props) {
     });
   }
 
-  const label = state.liked ? "Unlike" : "Like";
+  const label = state.liked ? "Cheered" : "Cheer";
 
   return (
     <Button
@@ -49,22 +53,20 @@ export function LikeButton({ donationId, initialLiked, initialCount }: Props) {
       size="sm"
       onClick={onClick}
       disabled={isPending}
-      aria-label={label}
+      aria-label={state.liked ? "Undo cheer" : "Cheer"}
       aria-pressed={state.liked}
       className={cn(
-        "gap-2",
+        "-ml-2.5 gap-1.5",
         state.liked
-          ? "text-primary hover:text-primary"
+          ? "text-destructive hover:text-destructive"
           : "text-muted-foreground hover:text-foreground"
       )}
     >
-      <Heart
-        className={cn(
-          "h-4 w-4 transition-transform",
-          state.liked && "fill-current"
-        )}
-      />
+      <span aria-hidden className="text-[15px] leading-none">
+        {state.liked ? "♥" : "♡"}
+      </span>
       <span className="font-mono tabular-nums">{state.count}</span>
+      {label}
     </Button>
   );
 }

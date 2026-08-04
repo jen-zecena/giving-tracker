@@ -11,8 +11,12 @@ export default async function DiscoverPage() {
 
   return (
     <>
-      <PageHeader title="Discover" subtitle="Find people to follow" showAddButton={false} />
-      <div className="p-4 sm:p-6 lg:p-8">
+      <PageHeader
+        title="Find people"
+        subtitle="Follow people to see their giving in your feed"
+        showAddButton={false}
+      />
+      <div className="px-4 sm:px-6 lg:px-8 pb-12">
         <DiscoverClient
           currentUserId={data.currentUserId}
           users={data.users}

@@ -6,10 +6,10 @@ import { useRouter } from "next/navigation";
 import { Check, Search, UserPlus, UserMinus, X } from "lucide-react";
 import { toast } from "sonner";
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { EmptyState } from "@/components/empty-state";
 import { Input } from "@/components/ui/input";
 import {
   filterDiscoverUsers,
@@ -22,8 +22,8 @@ import {
   type PendingRequest,
 } from "@/lib/actions/follow-requests";
 import { follow, unfollow } from "@/lib/actions/follows";
-import { privacyTierMeta } from "@/lib/privacy-tier";
 import type { DiscoverUser } from "@/lib/queries/discover";
+import { cn } from "@/lib/utils";
 
 type Props = {
   currentUserId: string;
@@ -31,6 +31,21 @@ type Props = {
   followingIds: string[];
   pendingOutgoingIds: string[];
   incomingRequests: PendingRequest[];
+};
+
+/** DS sentence-case tier labels + soft badge tones. */
+const TIER_BADGES: Record<
+  DiscoverUser["privacy_tier"],
+  { label: string; className: string }
+> = {
+  open_giver: {
+    label: "Open giver",
+    className: "bg-brand-soft text-green-700",
+  },
+  friends_only: {
+    label: "Friends only",
+    className: "bg-surface-sunken text-muted-foreground",
+  },
 };
 
 function firstInitial(name: string | null): string {
@@ -122,35 +137,42 @@ export function DiscoverClient({
     <div className="mx-auto max-w-5xl space-y-6">
       {/* ── Search ───────────────────────────────────────────── */}
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-faint" />
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by name or bio..."
-          className="pl-9"
-          aria-label="Search users"
+          placeholder="Search by name or bio…"
+          className="h-10 rounded-lg border-border-strong bg-card pl-10 shadow-2xs"
+          aria-label="Search people"
         />
       </div>
 
       {/* ── Incoming pending requests ────────────────────────── */}
       {incomingRequests.length > 0 && (
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">
-              Follow requests ({incomingRequests.length})
+          <CardHeader>
+            <CardTitle>
+              Follow requests{" "}
+              <span className="font-mono tabular-nums text-muted-foreground">
+                ({incomingRequests.length})
+              </span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {incomingRequests.map((req) => (
               <div
                 key={req.id}
-                className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3"
+                className="flex items-center gap-3 rounded-lg bg-surface-sunken p-3"
               >
-                <PendingAvatar name={req.from_display_name} />
+                <Avatar>
+                  <AvatarFallback className="bg-brand-soft text-green-700 text-xs font-semibold">
+                    {firstInitial(req.from_display_name)}
+                  </AvatarFallback>
+                </Avatar>
                 <div className="flex-1 min-w-0">
                   <Link
                     href={`/profile/${req.from_user_id}`}
-                    className="block truncate font-medium text-foreground hover:underline"
+                    className="block truncate text-sm font-medium text-text-strong outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 rounded-sm"
                   >
                     {req.from_display_name || "Unknown user"}
                   </Link>
@@ -165,15 +187,15 @@ export function DiscoverClient({
                     onClick={() => handleReject(req)}
                     disabled={pendingRequestId === req.id}
                   >
-                    <X className="mr-1 h-4 w-4" />
-                    Reject
+                    <X aria-hidden />
+                    Decline
                   </Button>
                   <Button
                     size="sm"
                     onClick={() => handleAccept(req)}
                     disabled={pendingRequestId === req.id}
                   >
-                    <Check className="mr-1 h-4 w-4" />
+                    <Check aria-hidden />
                     Accept
                   </Button>
                 </div>
@@ -185,15 +207,21 @@ export function DiscoverClient({
 
       {/* ── User grid ─────────────────────────────────────────── */}
       {filtered.length === 0 ? (
-        <EmptyState
-          icon={Search}
-          title={query ? "No matches" : "No one to discover yet"}
-          description={
-            query
-              ? "Try a different name or bio keyword."
-              : "As people join, they'll show up here for you to follow."
-          }
-        />
+        <div className="rounded-xl border-2 border-dashed border-border-strong bg-transparent">
+          <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
+            <span className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-full bg-brand-soft text-brand">
+              <Search className="h-6 w-6" aria-hidden />
+            </span>
+            <h2 className="text-lg font-semibold tracking-tight text-text-strong">
+              {query ? "No matches" : "No one to find yet"}
+            </h2>
+            <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+              {query
+                ? "Try a different name or bio keyword."
+                : "As people join, they'll show up here for you to follow."}
+            </p>
+          </div>
+        </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((user) => {
@@ -231,32 +259,38 @@ function UserCard({
   isPending: boolean;
   onClick: () => void;
 }) {
-  const tierMeta = privacyTierMeta(user.privacy_tier);
+  const tierBadge = TIER_BADGES[user.privacy_tier];
   const name = user.display_name?.trim() || "Anonymous";
 
   return (
-    <Card className="flex flex-col">
-      <CardContent className="flex flex-1 flex-col gap-3 p-4">
+    <Card className="h-full">
+      <CardContent className="flex h-full flex-col gap-3">
         <div className="flex items-center gap-3">
-          <GradientAvatar
-            name={user.display_name}
-            avatarUrl={user.avatar_url}
-          />
+          <Avatar size="lg">
+            {user.avatar_url && <AvatarImage src={user.avatar_url} alt="" />}
+            <AvatarFallback className="bg-brand-soft text-green-700 text-sm font-semibold">
+              {firstInitial(user.display_name)}
+            </AvatarFallback>
+          </Avatar>
           <div className="min-w-0 flex-1">
             <Link
               href={`/profile/${user.id}`}
-              className="block truncate font-semibold text-foreground hover:underline"
+              className="block truncate font-semibold text-text-strong outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 rounded-sm"
             >
               {name}
             </Link>
-            <Badge variant="outline" className="mt-1 text-xs font-normal">
-              {tierMeta.label}
+            <Badge
+              className={cn("mt-1 border-transparent", tierBadge.className)}
+            >
+              {tierBadge.label}
             </Badge>
           </div>
         </div>
 
         <p className="min-h-[2.5rem] text-sm text-muted-foreground line-clamp-2">
-          {user.bio?.trim() || <span className="italic">No bio yet</span>}
+          {user.bio?.trim() || (
+            <span className="italic text-text-faint">No bio yet</span>
+          )}
         </p>
 
         <FollowButton state={state} isPending={isPending} onClick={onClick} />
@@ -291,61 +325,28 @@ function FollowButton({
         disabled={isPending}
         className="mt-auto w-full"
       >
-        <UserMinus className="mr-1.5 h-4 w-4" />
+        <UserMinus aria-hidden />
         Unfollow
       </Button>
     );
   }
-  return (
-    <Button
-      onClick={onClick}
-      disabled={isPending}
-      className="mt-auto w-full"
-    >
-      <UserPlus className="mr-1.5 h-4 w-4" />
-      {state === "follow" ? "Follow" : "Request"}
-    </Button>
-  );
-}
-
-// ── Gradient avatar ──────────────────────────────────────────
-
-function GradientAvatar({
-  name,
-  avatarUrl,
-}: {
-  name: string | null;
-  avatarUrl: string | null;
-}) {
-  if (avatarUrl) {
+  if (state === "request") {
     return (
-      <span className="relative inline-flex size-10 shrink-0 overflow-hidden rounded-full">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={avatarUrl}
-          alt=""
-          className="size-full object-cover"
-        />
-      </span>
+      <Button
+        variant="outline"
+        onClick={onClick}
+        disabled={isPending}
+        className="mt-auto w-full"
+      >
+        <UserPlus aria-hidden />
+        Request
+      </Button>
     );
   }
   return (
-    <span
-      className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-chart-2 text-sm font-semibold text-primary-foreground"
-      aria-hidden="true"
-    >
-      {firstInitial(name)}
-    </span>
-  );
-}
-
-function PendingAvatar({ name }: { name: string | null }) {
-  return (
-    <span
-      className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-chart-2 text-sm font-semibold text-primary-foreground"
-      aria-hidden="true"
-    >
-      {firstInitial(name)}
-    </span>
+    <Button onClick={onClick} disabled={isPending} className="mt-auto w-full">
+      <UserPlus aria-hidden />
+      Follow
+    </Button>
   );
 }
