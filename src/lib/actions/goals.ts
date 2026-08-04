@@ -20,6 +20,8 @@ async function getAuthed() {
 }
 
 function invalidateGoals() {
+  // Goals now live in Settings → "Goals & income" (/goals redirects there).
+  revalidatePath("/settings");
   revalidatePath("/goals");
   revalidatePath("/dashboard");
 }

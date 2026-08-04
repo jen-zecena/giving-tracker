@@ -62,6 +62,12 @@ export async function updateSettings(
     updates.display_name = data.display_name.trim();
   if (data.bio !== undefined) updates.bio = data.bio?.trim() || null;
   if (data.privacy_tier !== undefined) updates.privacy_tier = data.privacy_tier;
+  if (data.show_amounts_to_friends !== undefined)
+    updates.show_amounts_to_friends = data.show_amounts_to_friends;
+  if (data.show_percentage_publicly !== undefined)
+    updates.show_percentage_publicly = data.show_percentage_publicly;
+  if (data.email_notifications !== undefined)
+    updates.email_notifications = data.email_notifications;
 
   if (data.salary !== undefined) {
     if (data.salary === null) {

@@ -10,23 +10,38 @@ import {
   Download,
   Pencil,
   Trash2,
-  Heart,
   Building2,
-  DollarSign,
-  RefreshCw,
   HeartHandshake,
   Check,
   X as XIcon,
   Clock,
+  List,
+  MoreHorizontal,
+  type LucideIcon,
 } from "lucide-react";
 
-import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/nav/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectTrigger,
@@ -36,7 +51,6 @@ import {
 } from "@/components/ui/select";
 import {
   AlertDialog,
-  AlertDialogTrigger,
   AlertDialogContent,
   AlertDialogHeader,
   AlertDialogTitle,
@@ -53,6 +67,7 @@ import {
   confirmDonation,
 } from "@/lib/actions/donations";
 import { usePendingDonations } from "@/components/nav/pending-donations-context";
+import { cn } from "@/lib/utils";
 import type { Donation, CauseTag } from "@/types";
 
 // ── Constants ─────────────────────────────────────────────
@@ -62,10 +77,10 @@ const CAUSE_TAGS: { value: CauseTag; label: string }[] = [
   { value: "health", label: "Health" },
   { value: "environment", label: "Environment" },
   { value: "poverty", label: "Poverty" },
-  { value: "animal_welfare", label: "Animal Welfare" },
-  { value: "arts_culture", label: "Arts & Culture" },
-  { value: "disaster_relief", label: "Disaster Relief" },
-  { value: "human_rights", label: "Human Rights" },
+  { value: "animal_welfare", label: "Animal welfare" },
+  { value: "arts_culture", label: "Arts & culture" },
+  { value: "disaster_relief", label: "Disaster relief" },
+  { value: "human_rights", label: "Human rights" },
   { value: "community", label: "Community" },
   { value: "religious", label: "Religious" },
 ];
@@ -86,6 +101,9 @@ const SORT_OPTIONS = [
   { value: "highest", label: "Highest amount" },
   { value: "lowest", label: "Lowest amount" },
 ] as const;
+
+// DS eyebrow treatment — the only uppercase in the app (12px tracked mono).
+const EYEBROW = "font-mono text-[11px] uppercase tracking-[0.12em] text-text-faint";
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-US", {
@@ -126,17 +144,21 @@ export default function DonationsPage() {
   );
   const [sortBy, setSortBy] = useState(searchParams.get("sort") ?? "newest");
 
+  // DS controls: status tab (All / Pending; Recurring navigates away) and
+  // a Table / Cards view toggle.
+  const [statusTab, setStatusTab] = useState<"all" | "pending">("all");
+  const [view, setView] = useState<"table" | "cards">("table");
+
   // Data state
   const [donations, setDonations] = useState<Donation[]>([]);
   const [pendingDonations, setPendingDonations] = useState<Donation[]>([]);
-  const [total, setTotal] = useState(0);
   const [summary, setSummary] = useState({
     count: 0,
     total: 0,
     organizations: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const { refresh: refreshPendingBadge } = usePendingDonations();
 
   // Delete state
@@ -186,7 +208,6 @@ export default function DonationsPage() {
 
       if (donationsResult.data) {
         setDonations(donationsResult.data.items);
-        setTotal(donationsResult.data.total);
       }
       if (summaryResult.data) {
         setSummary(summaryResult.data);
@@ -324,50 +345,116 @@ export default function DonationsPage() {
     toast.success("CSV exported");
   }
 
+  // ── Derived ───────────────────────────────────────────
+
+  const hasFilters = Boolean(search || causeFilter || yearFilter);
+  const averageGift =
+    summary.count > 0 ? Math.round(summary.total / summary.count) : 0;
+
+  const summaryCells: [string, string][] = [
+    ["Logged", `${summary.count} gift${summary.count === 1 ? "" : "s"}`],
+    ["Total", formatCurrency(summary.total)],
+    ["Average gift", formatCurrency(averageGift)],
+    ["Organizations", String(summary.organizations)],
+  ];
+
   // ── Render ────────────────────────────────────────────
 
   return (
     <>
-      <PageHeader
-        title="My Donations"
-        subtitle="View and manage your giving history"
-      />
+      <PageHeader title="My giving" subtitle="Every gift you've logged" />
 
-      <div className="p-4 sm:p-6 lg:p-8 space-y-6">
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <SummaryCard
-            label="Total Donations"
-            value={loading ? null : String(summary.count)}
-            icon={<Heart className="h-5 w-5 text-primary" />}
-            bgClass="bg-metric-purple"
-          />
-          <SummaryCard
-            label="Total Given"
-            value={loading ? null : formatCurrency(summary.total)}
-            icon={<DollarSign className="h-5 w-5 text-success" />}
-            bgClass="bg-metric-green"
-          />
-          <SummaryCard
-            label="Organizations"
-            value={loading ? null : String(summary.organizations)}
-            icon={<Building2 className="h-5 w-5 text-info" />}
-            bgClass="bg-metric-blue"
-          />
+      <div className="px-4 sm:px-6 lg:px-8 pb-12 space-y-6">
+        {/* Summary strip — one white card, four divided columns */}
+        <Card className="py-5">
+          <div className="grid grid-cols-2 lg:grid-cols-4">
+            {summaryCells.map(([label, value], i) => (
+              <div
+                key={label}
+                className={cn(
+                  "px-5 sm:px-6",
+                  i > 0 && "lg:border-l lg:border-border",
+                  i % 2 === 1 && "max-lg:border-l max-lg:border-border",
+                  i >= 2 && "max-lg:mt-4"
+                )}
+              >
+                <div className="text-xs text-muted-foreground">{label}</div>
+                {loading ? (
+                  <Skeleton className="mt-1.5 h-7 w-20" />
+                ) : (
+                  <div className="mt-1 font-mono text-[22px] font-semibold text-text-strong">
+                    {value}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* Controls row — status tabs left, search + view toggle right */}
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <Tabs
+            value={statusTab}
+            onValueChange={(value) => {
+              if (value === "recurring") {
+                router.push("/donations/recurring");
+                return;
+              }
+              setStatusTab(value as "all" | "pending");
+            }}
+          >
+            <TabsList>
+              <TabsTrigger value="all" className="px-2.5">
+                All
+                {!loading && (
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {summary.count}
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="pending" className="px-2.5">
+                Pending
+                {!loading && (
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {pendingDonations.length}
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="recurring" className="px-2.5">
+                Recurring
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-faint" />
+              <Input
+                placeholder="Search your giving…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+                aria-label="Search your giving"
+              />
+            </div>
+            <Tabs
+              value={view}
+              onValueChange={(value) => setView(value as "table" | "cards")}
+            >
+              <TabsList>
+                <TabsTrigger value="table" className="px-2.5">
+                  Table
+                </TabsTrigger>
+                <TabsTrigger value="cards" className="px-2.5">
+                  Cards
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </div>
 
-        {/* Filter Bar */}
-        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-          <div className="relative flex-1 w-full sm:max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search organizations..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-
+        {/* Second compact row — cause / year / sort filters + export */}
+        <div className="flex flex-wrap items-center gap-2.5">
           <Select
             value={causeFilter}
             onValueChange={(val) => {
@@ -395,13 +482,13 @@ export default function DonationsPage() {
               updateFilters({ year: val ?? "" });
             }}
           >
-            <SelectTrigger className="w-full sm:w-[130px]">
+            <SelectTrigger className="w-full sm:w-[120px]">
               <SelectValue placeholder="All years" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="">All years</SelectItem>
               {getYearOptions().map((y) => (
-                <SelectItem key={y} value={y}>
+                <SelectItem key={y} value={y} className="font-mono">
                   {y}
                 </SelectItem>
               ))}
@@ -429,27 +516,27 @@ export default function DonationsPage() {
 
           <Button
             variant="outline"
-            size="sm"
             onClick={handleExportCSV}
             disabled={donations.length === 0}
-            className="shrink-0"
+            className="ml-auto shrink-0"
           >
-            <Download className="h-4 w-4 mr-1.5" />
-            CSV
+            <Download className="h-4 w-4" />
+            Export
           </Button>
         </div>
 
-        {/* Pending section — always at the top when there are pending rows */}
+        {/* Pending section — needs action regardless of filters */}
         {!loading && pendingDonations.length > 0 && (
           <section id="pending" className="space-y-3">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-warning" aria-hidden />
-              <h2 className="text-base font-semibold text-foreground">
-                Pending ({pendingDonations.length})
+              <h2 className="text-base font-semibold text-text-strong">
+                Pending (
+                <span className="font-mono">{pendingDonations.length}</span>)
               </h2>
             </div>
             <p className="text-sm text-muted-foreground">
-              Confirm or skip these recurring donations. They won&apos;t count
+              Confirm or skip these recurring gifts. They won&apos;t count
               toward your totals until you confirm.
             </p>
             <div className="space-y-3">
@@ -466,46 +553,88 @@ export default function DonationsPage() {
           </section>
         )}
 
-        {/* Donation List */}
+        {/* Pending tab with nothing waiting */}
+        {!loading && statusTab === "pending" && pendingDonations.length === 0 && (
+          <DashedEmpty
+            icon={Clock}
+            title="You're all caught up"
+            description="Recurring gifts will wait here for your confirmation."
+          />
+        )}
+
+        {/* Donation list — All tab only */}
         {loading ? (
           <LoadingSkeleton />
-        ) : donations.length === 0 ? (
-          (search || causeFilter || yearFilter) && summary.count > 0 ? (
-            <EmptyState
-              icon={Search}
-              title="No matching donations"
-              description="Try adjusting your search or filters to find what you're looking for."
+        ) : statusTab !== "all" ? null : donations.length === 0 ? (
+          hasFilters && summary.count > 0 ? (
+            <DashedEmpty
+              icon={List}
+              title="Nothing matches"
+              description="Try a different filter, or log your next gift."
+              action
             />
           ) : pendingDonations.length > 0 ? null : (
-            <EmptyState
+            <DashedEmpty
               icon={HeartHandshake}
               title="No donations yet"
-              description="Once you log a donation it'll show up here. You can always come back and edit or remove it."
-              action={{ label: "Log a donation", href: "/donations/new" }}
+              description="Log your first gift and it'll show up here."
+              action
             />
           )
+        ) : view === "table" ? (
+          <Card className="gap-0 py-2">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className={cn("px-4", EYEBROW, "font-medium")}>
+                    Organization
+                  </TableHead>
+                  <TableHead className={cn("px-4", EYEBROW, "font-medium")}>
+                    Date
+                  </TableHead>
+                  <TableHead className={cn("px-4", EYEBROW, "font-medium")}>
+                    Cause
+                  </TableHead>
+                  <TableHead className={cn("px-4", EYEBROW, "font-medium")}>
+                    Scope
+                  </TableHead>
+                  <TableHead
+                    className={cn("px-4 text-right", EYEBROW, "font-medium")}
+                  >
+                    Amount
+                  </TableHead>
+                  <TableHead className="w-12 px-4">
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {donations.map((donation) => (
+                  <DonationTableRow
+                    key={donation.id}
+                    donation={donation}
+                    onDelete={() => {
+                      setDeleteTarget(donation);
+                      setDeleteDialogOpen(true);
+                    }}
+                  />
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
         ) : (
-          <>
-            <p className="text-sm text-muted-foreground">
-              {total} donation{total !== 1 ? "s" : ""}
-              {(search || causeFilter || yearFilter) &&
-                total !== summary.count &&
-                ` (filtered from ${summary.count})`}
-            </p>
-
-            <div className="space-y-3">
-              {donations.map((donation) => (
-                <DonationRow
-                  key={donation.id}
-                  donation={donation}
-                  onDelete={() => {
-                    setDeleteTarget(donation);
-                    setDeleteDialogOpen(true);
-                  }}
-                />
-              ))}
-            </div>
-          </>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {donations.map((donation) => (
+              <DonationCard
+                key={donation.id}
+                donation={donation}
+                onDelete={() => {
+                  setDeleteTarget(donation);
+                  setDeleteDialogOpen(true);
+                }}
+              />
+            ))}
+          </div>
         )}
       </div>
 
@@ -516,7 +645,11 @@ export default function DonationsPage() {
             <AlertDialogTitle>Delete donation?</AlertDialogTitle>
             <AlertDialogDescription>
               This will permanently delete your{" "}
-              {deleteTarget && formatCurrency(Number(deleteTarget.amount))}{" "}
+              {deleteTarget && (
+                <span className="font-mono">
+                  {formatCurrency(Number(deleteTarget.amount))}
+                </span>
+              )}{" "}
               donation to {deleteTarget?.organization_name}. This action cannot
               be undone.
             </AlertDialogDescription>
@@ -528,7 +661,7 @@ export default function DonationsPage() {
               onClick={handleDelete}
               disabled={deleting}
             >
-              {deleting ? "Deleting..." : "Delete"}
+              {deleting ? "Deleting…" : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -537,41 +670,31 @@ export default function DonationsPage() {
   );
 }
 
-// ── Summary Card ──────────────────────────────────────────
+// ── Shared bits ───────────────────────────────────────────
 
-function SummaryCard({
-  label,
-  value,
-  icon,
-  bgClass,
-}: {
-  label: string;
-  value: string | null;
-  icon: React.ReactNode;
-  bgClass: string;
-}) {
+function OrgIconSquare({ size = "sm" }: { size?: "sm" | "md" }) {
   return (
-    <Card className={`${bgClass} border-0`}>
-      <CardContent className="flex items-center gap-4 p-4 sm:p-5">
-        <div className="rounded-lg bg-card/60 p-2.5">{icon}</div>
-        <div>
-          <p className="text-sm font-medium text-muted-foreground">{label}</p>
-          {value === null ? (
-            <Skeleton className="h-7 w-20 mt-1" />
-          ) : (
-            <p className="text-xl font-semibold text-foreground font-mono tracking-tight">
-              {value}
-            </p>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center justify-center rounded-lg bg-brand-soft text-green-700",
+        size === "sm" ? "size-9" : "size-9.5"
+      )}
+      aria-hidden
+    >
+      <Building2 className={size === "sm" ? "h-4 w-4" : "h-4.5 w-4.5"} />
+    </span>
   );
 }
 
-// ── Donation Row ──────────────────────────────────────────
+function RecurringBadge() {
+  return (
+    <Badge variant="secondary" className="bg-info-soft text-info">
+      Recurring
+    </Badge>
+  );
+}
 
-function DonationRow({
+function RowActionsMenu({
   donation,
   onDelete,
 }: {
@@ -579,69 +702,125 @@ function DonationRow({
   onDelete: () => void;
 }) {
   return (
-    <Card className="hover:shadow-sm transition-shadow">
-      <CardContent className="flex flex-col sm:flex-row sm:items-center gap-3 p-4">
-        {/* Left: org + badges */}
-        <div className="flex-1 min-w-0 space-y-1.5">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-medium text-foreground truncate">
-              {donation.organization_name}
-            </span>
-            {donation.is_recurring && (
-              <Badge variant="secondary" className="gap-1">
-                <RefreshCw className="h-3 w-3" />
-                Recurring
-              </Badge>
-            )}
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {donation.cause_tag && (
-              <Badge variant="outline">
-                {CAUSE_LABEL_MAP[donation.cause_tag] ?? donation.cause_tag}
-              </Badge>
-            )}
-            <Badge variant="outline">
-              {SCOPE_LABELS[donation.scope] ?? donation.scope}
-            </Badge>
-            {donation.status === "pending" && (
-              <Badge
-                variant="secondary"
-                className="bg-warning/10 text-warning"
-              >
-                Pending
-              </Badge>
-            )}
-          </div>
-        </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Actions for donation to ${donation.organization_name}`}
+          />
+        }
+      >
+        <MoreHorizontal className="h-4 w-4" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-36">
+        <DropdownMenuItem
+          render={<Link href={`/donations/${donation.id}/edit`} />}
+        >
+          <Pencil className="h-4 w-4" />
+          Edit
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem variant="destructive" onClick={onDelete}>
+          <Trash2 className="h-4 w-4" />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
-        {/* Right: date + amount + actions */}
-        <div className="flex items-center gap-4 sm:gap-6 shrink-0">
-          <span className="text-sm text-muted-foreground font-mono">
-            {format(new Date(donation.donation_date + "T00:00:00"), "MMM d, yyyy")}
+// ── Table row ─────────────────────────────────────────────
+
+function DonationTableRow({
+  donation,
+  onDelete,
+}: {
+  donation: Donation;
+  onDelete: () => void;
+}) {
+  return (
+    <TableRow>
+      <TableCell className="px-4 py-3">
+        <span className="flex items-center gap-2.5">
+          <OrgIconSquare />
+          <span className="max-w-64 truncate font-semibold text-text-strong">
+            {donation.organization_name}
           </span>
-          <span className="text-base font-semibold text-foreground font-mono tabular-nums min-w-[80px] text-right">
-            {formatCurrency(Number(donation.amount))}
-          </span>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              render={<Link href={`/donations/${donation.id}/edit`} />}
-              aria-label={`Edit donation to ${donation.organization_name}`}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={onDelete}
-              aria-label={`Delete donation to ${donation.organization_name}`}
-              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
+          {donation.is_recurring && <RecurringBadge />}
+        </span>
+      </TableCell>
+      <TableCell className="px-4 py-3 font-mono text-sm">
+        {format(
+          new Date(donation.donation_date + "T00:00:00"),
+          "MMM d, yyyy"
+        )}
+      </TableCell>
+      <TableCell className="px-4 py-3">
+        {donation.cause_tag ? (
+          <Badge variant="outline">
+            {CAUSE_LABEL_MAP[donation.cause_tag] ?? donation.cause_tag}
+          </Badge>
+        ) : (
+          <span className="text-text-faint">—</span>
+        )}
+      </TableCell>
+      <TableCell className="px-4 py-3 text-muted-foreground">
+        {SCOPE_LABELS[donation.scope] ?? donation.scope}
+      </TableCell>
+      <TableCell className="px-4 py-3 text-right font-mono font-semibold text-text-strong tabular-nums">
+        {formatCurrency(Number(donation.amount))}
+      </TableCell>
+      <TableCell className="px-4 py-3 text-right">
+        <RowActionsMenu donation={donation} onDelete={onDelete} />
+      </TableCell>
+    </TableRow>
+  );
+}
+
+// ── Card view item ────────────────────────────────────────
+
+function DonationCard({
+  donation,
+  onDelete,
+}: {
+  donation: Donation;
+  onDelete: () => void;
+}) {
+  return (
+    <Card className="gap-3">
+      <CardContent className="flex items-center justify-between">
+        <OrgIconSquare size="md" />
+        <span className="flex items-center gap-1">
+          {donation.is_recurring && <RecurringBadge />}
+          <RowActionsMenu donation={donation} onDelete={onDelete} />
+        </span>
+      </CardContent>
+      <CardContent>
+        <div className="truncate font-semibold text-text-strong">
+          {donation.organization_name}
         </div>
+        <div className="mt-0.5 font-mono text-xs text-text-faint">
+          {format(
+            new Date(donation.donation_date + "T00:00:00"),
+            "MMM d, yyyy"
+          )}
+        </div>
+      </CardContent>
+      <CardContent className="flex items-center justify-between">
+        {donation.cause_tag ? (
+          <Badge variant="outline">
+            {CAUSE_LABEL_MAP[donation.cause_tag] ?? donation.cause_tag}
+          </Badge>
+        ) : (
+          <Badge variant="outline">
+            {SCOPE_LABELS[donation.scope] ?? donation.scope}
+          </Badge>
+        )}
+        <span className="font-mono text-lg font-semibold text-text-strong tabular-nums">
+          {formatCurrency(Number(donation.amount))}
+        </span>
       </CardContent>
     </Card>
   );
@@ -661,35 +840,41 @@ function PendingDonationRow({
   onSkip: () => void;
 }) {
   return (
-    <Card className="border-warning/30 bg-warning/5">
-      <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
-        <div className="flex-1 min-w-0 space-y-1.5">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-medium text-foreground truncate">
-              {donation.organization_name}
-            </span>
-            <Badge variant="secondary" className="gap-1 bg-warning/10 text-warning">
-              <Clock className="h-3 w-3" />
-              Pending
-            </Badge>
-            {donation.is_recurring && (
-              <Badge variant="secondary" className="gap-1">
-                <RefreshCw className="h-3 w-3" />
-                Recurring
+    <Card className="bg-warning-soft shadow-none ring-warning/25">
+      <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <span
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-card/80 text-warning"
+            aria-hidden
+          >
+            <Building2 className="h-4 w-4" />
+          </span>
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="truncate font-semibold text-text-strong">
+                {donation.organization_name}
+              </span>
+              <Badge variant="secondary" className="bg-warning/15 text-warning">
+                <Clock className="h-3 w-3" />
+                Pending
               </Badge>
-            )}
-          </div>
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-            <span className="font-mono">
-              {format(new Date(donation.donation_date + "T00:00:00"), "MMM d, yyyy")}
-            </span>
-            <span className="font-mono tabular-nums text-foreground font-semibold">
-              {formatCurrency(Number(donation.amount))}
-            </span>
+              {donation.is_recurring && <RecurringBadge />}
+            </div>
+            <div className="flex items-center gap-3 text-sm">
+              <span className="font-mono text-muted-foreground">
+                {format(
+                  new Date(donation.donation_date + "T00:00:00"),
+                  "MMM d, yyyy"
+                )}
+              </span>
+              <span className="font-mono font-semibold text-text-strong tabular-nums">
+                {formatCurrency(Number(donation.amount))}
+              </span>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex shrink-0 items-center gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -697,7 +882,7 @@ function PendingDonationRow({
             disabled={busy}
             aria-label={`Skip pending donation to ${donation.organization_name}`}
           >
-            <XIcon className="h-4 w-4 mr-1" />
+            <XIcon className="h-4 w-4" />
             Skip
           </Button>
           <Button
@@ -706,12 +891,50 @@ function PendingDonationRow({
             disabled={busy}
             aria-label={`Confirm pending donation to ${donation.organization_name}`}
           >
-            <Check className="h-4 w-4 mr-1" />
-            {busy ? "Saving..." : "Confirm"}
+            <Check className="h-4 w-4" />
+            {busy ? "Saving…" : "Confirm"}
           </Button>
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+// ── Empty state (DS dashed block) ─────────────────────────
+
+function DashedEmpty({
+  icon: Icon,
+  title,
+  description,
+  action = false,
+}: {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  action?: boolean;
+}) {
+  return (
+    <div className="rounded-xl border border-dashed border-border-strong px-6 py-12 text-center">
+      <span
+        className="mx-auto flex size-11 items-center justify-center rounded-full bg-brand-soft text-green-700"
+        aria-hidden
+      >
+        <Icon className="h-5 w-5" />
+      </span>
+      <h3 className="mt-4 text-base font-semibold text-text-strong">{title}</h3>
+      <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+        {description}
+      </p>
+      {action && (
+        <Button
+          size="sm"
+          className="mt-5"
+          render={<Link href="/donations/new" />}
+        >
+          Log a donation
+        </Button>
+      )}
+    </div>
   );
 }
 
@@ -722,7 +945,8 @@ function LoadingSkeleton() {
     <div className="space-y-3">
       {Array.from({ length: 5 }).map((_, i) => (
         <Card key={i}>
-          <CardContent className="flex items-center gap-4 p-4">
+          <CardContent className="flex items-center gap-4">
+            <Skeleton className="size-9 rounded-lg" />
             <div className="flex-1 space-y-2">
               <Skeleton className="h-5 w-48" />
               <Skeleton className="h-4 w-32" />

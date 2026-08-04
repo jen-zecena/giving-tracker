@@ -12,8 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/empty-state";
 import { removeFollower, unfollow } from "@/lib/actions/follows";
-import { privacyTierMeta } from "@/lib/privacy-tier";
 import type { ProfileSummary } from "@/lib/queries/profile";
+
+import { tierLabel } from "./profile-blocks";
 
 function firstInitial(name: string | null): string {
   const trimmed = name?.trim();
@@ -34,7 +35,6 @@ function FollowUserRow({
   actionIcon: typeof UserMinus;
   onAction: (user: ProfileSummary) => void;
 }) {
-  const tier = privacyTierMeta(user.privacy_tier);
   const displayName = user.display_name?.trim() || "Unnamed giver";
 
   return (
@@ -43,7 +43,7 @@ function FollowUserRow({
         {user.avatar_url ? (
           <AvatarImage src={user.avatar_url} alt="" />
         ) : null}
-        <AvatarFallback className="bg-gradient-to-br from-primary to-chart-2 font-sans text-sm font-semibold text-primary-foreground">
+        <AvatarFallback className="bg-[var(--green-500)] font-sans text-sm font-semibold text-primary-foreground">
           {firstInitial(user.display_name)}
         </AvatarFallback>
       </Avatar>
@@ -57,7 +57,7 @@ function FollowUserRow({
             {displayName}
           </Link>
           <Badge variant="outline" className="shrink-0 font-normal">
-            {tier.label}
+            {tierLabel(user.privacy_tier)}
           </Badge>
         </div>
         {user.bio?.trim() ? (

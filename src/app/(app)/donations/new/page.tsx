@@ -1,6 +1,6 @@
 import { PageHeader } from "@/components/nav/page-header";
 import { getOrganizationSuggestions } from "@/lib/actions/donations";
-import { NewDonationForm } from "./new-donation-form";
+import { DonationForm } from "./new-donation-form";
 
 export default async function NewDonationPage() {
   const result = await getOrganizationSuggestions();
@@ -9,11 +9,12 @@ export default async function NewDonationPage() {
   return (
     <>
       <PageHeader
-        title="Log a Donation"
-        subtitle="Track your charitable contribution"
+        title="Log a donation"
+        subtitle="Tracking only — we never move your money"
+        showAddButton={false}
       />
-      <div className="p-4 sm:p-6 lg:p-8">
-        <NewDonationForm initialOrgs={initialOrgs} />
+      <div className="px-4 sm:px-6 lg:px-8 pb-12">
+        <DonationForm initialOrgs={initialOrgs} />
       </div>
     </>
   );
