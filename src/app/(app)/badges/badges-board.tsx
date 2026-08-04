@@ -37,7 +37,8 @@ const CATEGORY_OPTIONS: { value: CategoryFilter; label: string }[] = [
 ];
 
 export function BadgesBoard({ badges }: { badges: BadgeData[] }) {
-  const [tab, setTab] = useState<TabValue>("earned");
+  // DS default: show the full board first (Screens.jsx Milestones()).
+  const [tab, setTab] = useState<TabValue>("all");
   const [category, setCategory] = useState<CategoryFilter>("all");
 
   const filtered = useMemo(
