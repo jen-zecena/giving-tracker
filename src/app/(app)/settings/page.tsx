@@ -4,9 +4,26 @@ import { PageHeader } from "@/components/nav/page-header";
 import { getProfile } from "@/lib/actions/profile";
 import { decryptSalaryFromDB } from "@/lib/salary";
 
-import { SettingsForm } from "./settings-form";
+import { AccountPane } from "./account-pane";
+import { GoalsIncomePane } from "./goals-income-pane";
+import { NotificationsPane } from "./notifications-pane";
+import { PrivacyPane } from "./privacy-pane";
+import { ProfilePane } from "./profile-pane";
+import { SETTINGS_TABS, SettingsNav, type SettingsTab } from "./settings-nav";
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string | string[] }>;
+}) {
+  const params = await searchParams;
+  const rawTab = Array.isArray(params.tab) ? params.tab[0] : params.tab;
+  const tab: SettingsTab = (SETTINGS_TABS as readonly string[]).includes(
+    rawTab ?? ""
+  )
+    ? (rawTab as SettingsTab)
+    : "profile";
+
   const result = await getProfile();
   if (result.error || !result.data) {
     redirect("/login");
@@ -33,18 +50,40 @@ export default async function SettingsPage() {
     <>
       <PageHeader
         title="Settings"
-        subtitle="Manage your account"
+        subtitle="You decide what anyone else can see"
         showAddButton={false}
       />
-      <div className="p-4 sm:p-6 lg:p-8">
-        <SettingsForm
-          initial={{
-            display_name: profile.display_name ?? "",
-            bio: profile.bio ?? "",
-            salary: salaryString,
-            privacy_tier: profile.privacy_tier,
-          }}
-        />
+      <div className="px-4 sm:px-6 lg:px-8 pb-12">
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[228px_minmax(0,1fr)] lg:gap-8">
+          <SettingsNav active={tab} />
+          <div className="grid min-w-0 gap-6">
+            {tab === "profile" && (
+              <ProfilePane
+                initial={{
+                  display_name: profile.display_name ?? "",
+                  bio: profile.bio ?? "",
+                  avatar_url: profile.avatar_url,
+                }}
+              />
+            )}
+            {tab === "privacy" && (
+              <PrivacyPane
+                initial={{
+                  privacy_tier: profile.privacy_tier,
+                  show_amounts_to_friends: profile.show_amounts_to_friends,
+                  show_percentage_publicly: profile.show_percentage_publicly,
+                }}
+              />
+            )}
+            {tab === "goals" && <GoalsIncomePane initialSalary={salaryString} />}
+            {tab === "notifications" && (
+              <NotificationsPane
+                initialEmailNotifications={profile.email_notifications}
+              />
+            )}
+            {tab === "account" && <AccountPane />}
+          </div>
+        </div>
       </div>
     </>
   );

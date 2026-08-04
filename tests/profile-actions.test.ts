@@ -112,6 +112,51 @@ assert(
   validateSettings({ privacy_tier: "public" }) === "Invalid privacy tier."
 );
 
+console.log("\nVisibility + notification toggles:");
+assert(
+  "show_amounts_to_friends true valid",
+  validateSettings({ show_amounts_to_friends: true }) === null
+);
+assert(
+  "show_amounts_to_friends false valid",
+  validateSettings({ show_amounts_to_friends: false }) === null
+);
+assert(
+  "show_percentage_publicly boolean valid",
+  validateSettings({ show_percentage_publicly: true }) === null
+);
+assert(
+  "email_notifications boolean valid",
+  validateSettings({ email_notifications: false }) === null
+);
+assert(
+  "non-boolean show_amounts_to_friends rejected",
+  // @ts-expect-error — deliberately invalid value for runtime check
+  validateSettings({ show_amounts_to_friends: "yes" }) ===
+    "Invalid visibility setting."
+);
+assert(
+  "non-boolean show_percentage_publicly rejected",
+  // @ts-expect-error — deliberately invalid value for runtime check
+  validateSettings({ show_percentage_publicly: 1 }) ===
+    "Invalid visibility setting."
+);
+assert(
+  "non-boolean email_notifications rejected",
+  // @ts-expect-error — deliberately invalid value for runtime check
+  validateSettings({ email_notifications: "no" }) ===
+    "Invalid notification setting."
+);
+assert(
+  "combined toggles with other fields valid",
+  validateSettings({
+    privacy_tier: "friends_only",
+    show_amounts_to_friends: true,
+    show_percentage_publicly: false,
+    email_notifications: true,
+  }) === null
+);
+
 console.log(`\n${"─".repeat(40)}`);
 console.log(`Results: ${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);

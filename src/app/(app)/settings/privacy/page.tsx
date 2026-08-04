@@ -1,12 +1,9 @@
+import { redirect } from "next/navigation";
+
+/**
+ * Privacy settings now live as a pane inside /settings (IA decision
+ * 2026-08-02). Keep the old deep link working.
+ */
 export default function PrivacySettingsPage() {
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold tracking-tight">
-        Privacy Settings
-      </h1>
-      <p className="mt-2 text-muted-foreground">
-        Privacy controls will appear here.
-      </p>
-    </div>
-  );
+  redirect("/settings?tab=privacy");
 }
