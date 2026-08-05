@@ -92,8 +92,10 @@ export function NonprofitsClient({ initial }: Props) {
 
   return (
     <div>
-      {/* Dark hero band */}
+      {/* Dark hero band — full-bleed; inner content aligns to the 1180
+          column */}
       <section className="bg-surface-inverse px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-[1180px]">
         <div className="max-w-[680px]">
           <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-white/45">
             Directory
@@ -157,9 +159,10 @@ export function NonprofitsClient({ initial }: Props) {
             </div>
           </form>
         </div>
+        </div>
       </section>
 
-      <div className="space-y-6 px-4 pt-6 pb-12 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-[1180px] space-y-6 px-4 pt-6 pb-12 sm:px-6 lg:px-8">
         {/* Filter pills + count row */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           {categories.length > 0 && (

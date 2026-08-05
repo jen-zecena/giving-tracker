@@ -16,7 +16,7 @@ export default async function DiscoverPage() {
         subtitle="Follow people to see their giving in your feed"
         showAddButton={false}
       />
-      <div className="px-4 sm:px-6 lg:px-8 pb-12">
+      <div className="mx-auto w-full max-w-[1180px] px-4 sm:px-6 lg:px-8 pb-12">
         <DiscoverClient
           currentUserId={data.currentUserId}
           users={data.users}

@@ -75,7 +75,7 @@ export default async function DashboardPage() {
     <div>
       <HeroBand summary={data.summary} firstName={firstName} />
 
-      <div className="px-4 sm:px-6 lg:px-8 pb-12 space-y-6">
+      <div className="mx-auto w-full max-w-[1180px] px-4 sm:px-6 lg:px-8 pb-12 space-y-6">
         {isEmpty ? (
           <EmptyState />
         ) : (
@@ -140,12 +140,15 @@ function HeroBand({
 
   return (
     <div
+      // Full-bleed band: the wash reaches both edges; only the content
+      // inside is capped at the DS's 1180 column.
       className="px-4 sm:px-6 lg:px-8 pt-6 lg:pt-8 pb-6"
       style={{
         background:
           "linear-gradient(180deg, var(--green-50), var(--sand-50) 88%)",
       }}
     >
+      <div className="mx-auto w-full max-w-[1180px]">
       <div className="flex flex-wrap items-start justify-between gap-6 mb-6">
         <div>
           <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-text-faint">
@@ -172,6 +175,7 @@ function HeroBand({
       <div className="grid grid-cols-1 lg:grid-cols-[1.35fr_1fr] gap-6 items-stretch">
         <TotalCard summary={summary} />
         <GoalRingCard summary={summary} />
+      </div>
       </div>
     </div>
   );

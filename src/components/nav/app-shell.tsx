@@ -25,14 +25,12 @@ export function AppShell({ children, user }: AppShellProps) {
       <div className="flex min-h-screen bg-background">
         <Sidebar user={user} />
 
-        {/* Main content — offset for sidebar on desktop, header/footer on mobile */}
+        {/* Main content — offset for sidebar on desktop, header/footer on
+            mobile. Pages cap their own content at --layout-max so colored
+            bands can still bleed full-width (preview feedback 2026-08-05). */}
         <main className="flex-1 min-w-0 lg:ml-[260px] pt-16 lg:pt-0 pb-20 lg:pb-0">
           <TopBar user={user} />
-          {/* DS layout: content max 1180 — pages stop stretching on wide
-              screens (preview feedback 2026-08-05). */}
-          <div className="mx-auto w-full max-w-[var(--layout-max)]">
-            {children}
-          </div>
+          {children}
         </main>
       </div>
     </PendingDonationsProvider>

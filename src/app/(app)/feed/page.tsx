@@ -109,7 +109,7 @@ export default async function FeedPage() {
     <>
       {/* Local header: same DS classes as PageHeader, plus the "Find
           people" action PageHeader doesn't support (see report note). */}
-      <header className="flex flex-wrap items-end justify-between gap-6 px-4 sm:px-6 lg:px-8 pt-6 lg:pt-8 pb-6">
+      <header className="mx-auto w-full max-w-[1180px] flex flex-wrap items-end justify-between gap-6 px-4 sm:px-6 lg:px-8 pt-6 lg:pt-8 pb-6">
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl lg:text-[2rem] font-semibold tracking-tight leading-tight truncate">
             Feed
@@ -129,7 +129,7 @@ export default async function FeedPage() {
         </div>
       </header>
 
-      <div className="px-4 sm:px-6 lg:px-8 pb-12">
+      <div className="mx-auto w-full max-w-[1180px] px-4 sm:px-6 lg:px-8 pb-12">
         <div
           className={
             hasRail

@@ -53,7 +53,7 @@ export default async function SettingsPage({
         subtitle="You decide what anyone else can see"
         showAddButton={false}
       />
-      <div className="px-4 sm:px-6 lg:px-8 pb-12">
+      <div className="mx-auto w-full max-w-[1180px] px-4 sm:px-6 lg:px-8 pb-12">
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[228px_minmax(0,1fr)] lg:gap-8">
           <SettingsNav active={tab} />
           <div className="grid min-w-0 gap-6">

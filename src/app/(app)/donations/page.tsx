@@ -364,7 +364,7 @@ export default function DonationsPage() {
     <>
       <PageHeader title="My giving" subtitle="Every gift you've logged" />
 
-      <div className="px-4 sm:px-6 lg:px-8 pb-12 space-y-6">
+      <div className="mx-auto w-full max-w-[1180px] px-4 sm:px-6 lg:px-8 pb-12 space-y-6">
         {/* Summary strip — one white card, four divided columns */}
         <Card className="py-5">
           <div className="grid grid-cols-2 lg:grid-cols-4">
