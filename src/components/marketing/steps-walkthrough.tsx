@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarDays, Heart } from "lucide-react";
+import { CalendarDays, ChevronDown, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STEPS = [
@@ -36,12 +36,14 @@ export function StepsWalkthrough() {
         <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-text-faint">
           How it works
         </span>
-        <h2 className="mt-2.5 mb-8 text-3xl lg:text-[44px] leading-[1.08] font-semibold tracking-tight">
+        <h2 className="mt-2.5 mb-8 text-3xl lg:text-[44px] leading-[1.08] font-bold tracking-tight">
           Three habits,
           <br />
           no spreadsheets.
         </h2>
-        <div className="grid gap-1">
+        {/* Preview feedback: inactive steps read as static text — give every
+            step a visible card affordance plus an expand chevron. */}
+        <div className="grid gap-2">
           {STEPS.map((s) => {
             const on = s.id === step;
             return (
@@ -51,9 +53,11 @@ export function StepsWalkthrough() {
                 onClick={() => setStep(s.id)}
                 aria-expanded={on}
                 className={cn(
-                  "grid grid-cols-[auto_1fr] gap-4 rounded-xl p-4 pl-4 text-left transition-colors",
+                  "grid cursor-pointer grid-cols-[auto_1fr_auto] items-start gap-4 rounded-xl p-4 pl-4 text-left transition-colors",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  on ? "bg-card shadow-2xs shadow-xs" : "hover:bg-surface-sunken"
+                  on
+                    ? "bg-card shadow-2xs shadow-xs"
+                    : "shadow-2xs bg-card/50 hover:bg-card hover:shadow-xs active:translate-y-px"
                 )}
               >
                 <span
@@ -76,6 +80,13 @@ export function StepsWalkthrough() {
                     </span>
                   )}
                 </span>
+                <ChevronDown
+                  aria-hidden="true"
+                  className={cn(
+                    "mt-1.5 h-4 w-4 text-text-faint transition-transform duration-200",
+                    on && "rotate-180"
+                  )}
+                />
               </button>
             );
           })}
