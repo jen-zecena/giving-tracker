@@ -72,7 +72,7 @@ function Hero() {
         // sand at 62% — the DS's own stop (screenshot feedback 2026-08-05:
         // green started mid-header and read too strong).
         background:
-          "linear-gradient(180deg, var(--green-50) 0%, var(--sand-50) 62%)",
+          "linear-gradient(180deg, color-mix(in srgb, var(--green-50) 55%, var(--sand-50)) 0%, var(--sand-50) 62%)",
       }}
     >
       <div className="relative z-10 mx-auto max-w-[1280px] px-5 lg:px-10 text-center">
