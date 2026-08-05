@@ -65,13 +65,14 @@ export default function Home() {
 function Hero() {
   return (
     <section
-      className="relative -mt-[72px] overflow-hidden pt-28 lg:pt-32"
+      className="relative overflow-hidden pt-14"
       style={{
-        // The green wash carries past the product surface before fading to
-        // sand, matching the DS render (preview feedback: the transition
-        // sat too high).
+        // DS hero geometry: the nav sits above this section in normal flow,
+        // so the green band starts below the header, and the wash fades to
+        // sand at 62% — the DS's own stop (screenshot feedback 2026-08-05:
+        // green started mid-header and read too strong).
         background:
-          "linear-gradient(180deg, var(--green-50) 0%, var(--sand-50) 92%)",
+          "linear-gradient(180deg, var(--green-50) 0%, var(--sand-50) 62%)",
       }}
     >
       <div className="relative z-10 mx-auto max-w-[1280px] px-5 lg:px-10 text-center">
