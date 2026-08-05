@@ -32,9 +32,10 @@ import { cn } from "@/lib/utils";
  *  - "Voices" testimonials omitted — the DS marks them as placeholder copy
  *    and no real testimonials exist.
  *  - "Watch the 60-second tour" omitted — no tour exists.
- *  - Premium pricing shows "Coming soon" — no price exists in the repo.
  *  - Footer Company/Legal entries are inert text (pages don't exist yet;
  *    restored per preview feedback, but not rendered as dead links).
+ * Premium shows the DS's $6/mo card per preview feedback (2026-08-05),
+ * although billing isn't built — "Go premium" routes to /register.
  */
 
 const eyebrow =
@@ -471,19 +472,22 @@ function PricingFaq() {
                 Start your log
               </Button>
             </div>
+            {/* Preview feedback: show the full DS Premium card (price and
+                CTA) even though billing isn't built yet. */}
             <div className="grid gap-3 rounded-xl bg-brand-soft p-6">
               <div className="flex items-baseline justify-between">
                 <span className="text-[19px] font-semibold text-green-900">
                   Premium
                 </span>
-                <span className="rounded-full bg-card px-2.5 py-0.5 text-xs font-medium text-green-700">
-                  Coming soon
+                <span className="font-mono text-xl text-green-900">
+                  $6<span className="text-[13px]">/mo</span>
                 </span>
               </div>
               <p className="m-0 text-sm text-green-900/75">
                 Multi-year trends, CSV and tax summaries, receipt storage, and
-                custom goals are on the way.
+                custom goals.
               </p>
+              <Button render={<Link href="/register" />}>Go premium</Button>
             </div>
           </div>
         </div>
