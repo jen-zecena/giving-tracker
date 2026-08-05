@@ -28,7 +28,11 @@ export function AppShell({ children, user }: AppShellProps) {
         {/* Main content — offset for sidebar on desktop, header/footer on mobile */}
         <main className="flex-1 min-w-0 lg:ml-[260px] pt-16 lg:pt-0 pb-20 lg:pb-0">
           <TopBar user={user} />
-          {children}
+          {/* DS layout: content max 1180 — pages stop stretching on wide
+              screens (preview feedback 2026-08-05). */}
+          <div className="mx-auto w-full max-w-[var(--layout-max)]">
+            {children}
+          </div>
         </main>
       </div>
     </PendingDonationsProvider>

@@ -48,7 +48,7 @@ export default function Home() {
       <Hero />
       <Bento />
       <section id="how" className="scroll-mt-24 py-16 lg:py-28">
-        <div className="mx-auto max-w-[1280px] px-5 lg:px-10">
+        <div className="mx-auto max-w-[1180px] px-5 lg:px-10">
           <StepsWalkthrough />
         </div>
       </section>
@@ -75,7 +75,7 @@ function Hero() {
           "linear-gradient(180deg, color-mix(in srgb, var(--green-50) 55%, var(--sand-50)) 0%, var(--sand-50) 62%)",
       }}
     >
-      <div className="relative z-10 mx-auto max-w-[1280px] px-5 lg:px-10 text-center">
+      <div className="relative z-10 mx-auto max-w-[1180px] px-5 lg:px-10 text-center">
         <h1 className="mx-auto font-display font-bold text-6xl sm:text-7xl lg:text-[92px] leading-[0.98] tracking-tight text-green-900">
           Give a little,
           <br />
@@ -101,13 +101,13 @@ function Hero() {
       {/* Product surface, bleeding off the fold (decorative) */}
       <div
         aria-hidden="true"
-        className="pointer-events-none select-none relative mx-auto mt-14 max-w-[1280px] px-5 lg:px-10"
+        className="pointer-events-none select-none relative mx-auto mt-14 max-w-[1180px] px-5 lg:px-10"
       >
         <div
           className="rounded-t-[22px] bg-card p-6 pb-10"
           style={{
             boxShadow:
-              "var(--shadow-hairline), 0 -1px 60px -20px rgba(47,40,28,0.28)",
+              "var(--shadow-hairline), 0 -1px 60px -20px rgba(26,27,25,0.28)",
           }}
         >
           <div className="mb-5 flex items-center gap-2">
@@ -224,7 +224,7 @@ const tile =
 function Bento() {
   return (
     <section id="why" className="scroll-mt-24 pt-24">
-      <div className="mx-auto max-w-[1280px] px-5 lg:px-10">
+      <div className="mx-auto max-w-[1180px] px-5 lg:px-10">
         <div className="mb-7 flex flex-wrap items-end justify-between gap-6">
           <div>
             <span className={eyebrow}>The whole idea</span>
@@ -402,7 +402,7 @@ function PrivacyBand() {
       id="privacy"
       className="scroll-mt-24 bg-surface-inverse py-16 lg:py-24"
     >
-      <div className="mx-auto max-w-[1280px] px-5 lg:px-10">
+      <div className="mx-auto max-w-[1180px] px-5 lg:px-10">
         <div className="mb-10 grid items-end gap-8 lg:grid-cols-2 lg:gap-14">
           <div>
             <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-white/45">
@@ -452,7 +452,7 @@ function PrivacyBand() {
 function PricingFaq() {
   return (
     <section id="pricing" className="scroll-mt-24 py-16 lg:py-24">
-      <div className="mx-auto grid max-w-[1280px] items-start gap-10 px-5 lg:grid-cols-2 lg:gap-14 lg:px-10">
+      <div className="mx-auto grid max-w-[1180px] items-start gap-10 px-5 lg:grid-cols-2 lg:gap-14 lg:px-10">
         <div>
           <span className={eyebrow}>Pricing</span>
           <h2 className="mt-2.5 mb-6 text-3xl lg:text-[40px] leading-[1.1] font-bold tracking-tight">
@@ -539,7 +539,7 @@ function PricingFaq() {
 function Closing() {
   return (
     <section className="pb-16 lg:pb-24">
-      <div className="mx-auto max-w-[1280px] px-5 lg:px-10">
+      <div className="mx-auto max-w-[1180px] px-5 lg:px-10">
         <div className="rounded-2xl bg-brand px-8 py-14 lg:py-[72px] text-center">
           <h2 className="m-0 font-display font-bold text-4xl lg:text-[56px] leading-[1.05] text-white">
             Start the log today.
@@ -563,7 +563,7 @@ function Closing() {
 function SiteFooter() {
   return (
     <footer className="border-t border-border py-12">
-      <div className="mx-auto grid max-w-[1280px] gap-8 px-5 sm:grid-cols-2 lg:grid-cols-[1.4fr_repeat(3,1fr)] lg:px-10">
+      <div className="mx-auto grid max-w-[1180px] gap-8 px-5 sm:grid-cols-2 lg:grid-cols-[1.4fr_repeat(3,1fr)] lg:px-10">
         <div>
           <Logo />
           <p className="mt-3.5 max-w-[260px] text-sm text-muted-foreground">
@@ -616,7 +616,7 @@ function SiteFooter() {
           </div>
         ))}
       </div>
-      <div className="mx-auto mt-10 max-w-[1280px] border-t border-border px-5 pt-5 lg:px-10">
+      <div className="mx-auto mt-10 max-w-[1180px] border-t border-border px-5 pt-5 lg:px-10">
         <span className="text-xs text-text-faint">
           © 2026 Giving Tracker · Tracking only. We never touch your money.
         </span>

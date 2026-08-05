@@ -209,7 +209,7 @@ export function Sidebar({ user }: { user: ShellUser }) {
           const ring = goalRingProps(topGoal);
           return (
             <Link
-              href="/goals"
+              href="/settings?tab=goals"
               onClick={handleNavigation}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-brand-soft hover:bg-brand-soft-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label={`${topGoal.title}: ${ring.sub}`}
