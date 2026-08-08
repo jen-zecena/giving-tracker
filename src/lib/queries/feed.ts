@@ -3,7 +3,11 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import type { CauseTag, DonationScope, PrivacyTier } from "@/types";
 
-import { shouldShowAmount } from "@/lib/actions/feed-helpers";
+import {
+  ownVisibility,
+  shouldShowAmount,
+  type OwnVisibility,
+} from "@/lib/actions/feed-helpers";
 
 const FEED_PAGE_SIZE = 50;
 
@@ -29,6 +33,10 @@ export type FeedItem = {
   created_at: string;
   likes_count: number;
   user_has_liked: boolean;
+  /** True when the signed-in viewer posted this donation. */
+  is_own: boolean;
+  /** For own items: what OTHER people can see of it. Null on others' items. */
+  own_visibility: OwnVisibility | null;
 };
 
 export type FeedNonprofit = {
@@ -75,29 +83,54 @@ export async function getFeedPageData(): Promise<FeedPageData | null> {
     (r) => r.following_id as string
   );
 
-  if (followingIds.length === 0) {
-    return { items: [], followsCount: 0 };
+  const DONATION_COLUMNS =
+    "id, user_id, organization_name, amount, donation_date, scope, cause_tag, notes, hide_from_feed, is_private_override, fundraiser_url, nonprofit_id, created_at";
+
+  // ── Donations: followed users + the viewer's own ──────
+  // Followed rows keep the visibility contract (`hide_from_feed = false`,
+  // also RLS-enforced per DP-046). Own rows deliberately skip that filter:
+  // your own feed shows everything you logged — with a badge saying what
+  // others can see — so private/hidden gifts appear to you and only you.
+  const [followedRes, ownRes] = await Promise.all([
+    followingIds.length > 0
+      ? supabase
+          .from("donations")
+          .select(DONATION_COLUMNS)
+          .in("user_id", followingIds)
+          .eq("hide_from_feed", false)
+          .eq("status", "confirmed")
+          .order("donation_date", { ascending: false })
+          .order("created_at", { ascending: false })
+          .limit(FEED_PAGE_SIZE)
+      : Promise.resolve({ data: [], error: null }),
+    supabase
+      .from("donations")
+      .select(DONATION_COLUMNS)
+      .eq("user_id", user.id)
+      .eq("status", "confirmed")
+      .order("donation_date", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(FEED_PAGE_SIZE),
+  ]);
+  if (followedRes.error) {
+    throw new Error(
+      `Failed to load feed donations: ${followedRes.error.message}`
+    );
+  }
+  if (ownRes.error) {
+    throw new Error(`Failed to load own donations: ${ownRes.error.message}`);
   }
 
-  // ── Donations from followed users ─────────────────────
-  // `hide_from_feed = false` is also enforced by RLS (DP-046), but we
-  // include it here so the SQL plan can use the index hint and so the
-  // query stays correct even if the RLS contract is ever loosened.
-  const { data: donationRows, error: donationErr } = await supabase
-    .from("donations")
-    .select(
-      "id, user_id, organization_name, amount, donation_date, scope, cause_tag, notes, hide_from_feed, fundraiser_url, nonprofit_id, created_at"
-    )
-    .in("user_id", followingIds)
-    .eq("hide_from_feed", false)
-    .eq("status", "confirmed")
-    .order("donation_date", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(FEED_PAGE_SIZE);
-  if (donationErr) {
-    throw new Error(`Failed to load feed donations: ${donationErr.message}`);
-  }
-  const donations = donationRows ?? [];
+  // Merge, newest first (donation_date, then created_at), one page.
+  const donations = [...(followedRes.data ?? []), ...(ownRes.data ?? [])]
+    .sort((a, b) => {
+      const byDate = (b.donation_date as string).localeCompare(
+        a.donation_date as string
+      );
+      if (byDate !== 0) return byDate;
+      return (b.created_at as string).localeCompare(a.created_at as string);
+    })
+    .slice(0, FEED_PAGE_SIZE);
 
   if (donations.length === 0) {
     return { items: [], followsCount: followingIds.length };
@@ -217,17 +250,20 @@ export async function getFeedPageData(): Promise<FeedPageData | null> {
 
   const items: FeedItem[] = donations.map((d) => {
     const userId = d.user_id as string;
+    const isOwn = userId === user.id;
     const poster = profileById.get(userId) ?? {
       display_name: null,
       avatar_url: null,
       privacy_tier: "open_giver" as PrivacyTier,
       show_amounts_to_friends: false,
     };
-    const amountVisible = shouldShowAmount(
-      poster.privacy_tier,
-      poster.show_amounts_to_friends,
-      true // feed is by definition restricted to followed users
-    );
+    const amountVisible =
+      isOwn || // you always see your own amounts
+      shouldShowAmount(
+        poster.privacy_tier,
+        poster.show_amounts_to_friends,
+        true // feed is by definition restricted to followed users
+      );
     return {
       id: d.id as string,
       user_id: userId,
@@ -252,6 +288,14 @@ export async function getFeedPageData(): Promise<FeedPageData | null> {
       created_at: d.created_at as string,
       likes_count: likeCountById.get(d.id as string) ?? 0,
       user_has_liked: ownLikeSet.has(d.id as string),
+      is_own: isOwn,
+      own_visibility: isOwn
+        ? ownVisibility(
+            poster.privacy_tier,
+            Boolean(d.hide_from_feed),
+            Boolean(d.is_private_override)
+          )
+        : null,
     };
   });
 

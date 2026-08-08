@@ -11,6 +11,7 @@
  * other action tests).
  */
 import {
+  ownVisibility,
   resolveEmptyStateKind,
   shouldShowAmount,
 } from "../src/lib/actions/feed-helpers";
@@ -88,6 +89,33 @@ assert(
 assert(
   "many follows → no-activity",
   resolveEmptyStateKind(42) === "no-activity"
+);
+
+// ── ownVisibility ──────────────────────────────────────────
+console.log("\nownVisibility:");
+assert(
+  "hide_from_feed always wins → only_you",
+  ownVisibility("open_giver", true, false) === "only_you"
+);
+assert(
+  "per-gift private override → only_you",
+  ownVisibility("open_giver", false, true) === "only_you"
+);
+assert(
+  "private tier → only_you",
+  ownVisibility("private", false, false) === "only_you"
+);
+assert(
+  "friends_only tier → friends",
+  ownVisibility("friends_only", false, false) === "friends"
+);
+assert(
+  "open_giver tier → everyone",
+  ownVisibility("open_giver", false, false) === "everyone"
+);
+assert(
+  "friends_only + hidden → only_you",
+  ownVisibility("friends_only", true, false) === "only_you"
 );
 
 console.log(`\n${passed} passed, ${failed} failed`);

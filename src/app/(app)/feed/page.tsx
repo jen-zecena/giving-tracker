@@ -5,10 +5,13 @@ import {
   CheckCircle2,
   Compass,
   ExternalLink,
+  EyeOff,
+  Globe,
   Heart,
   MapPin,
   Plus,
   UserPlus,
+  Users,
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -332,6 +335,29 @@ function FeedCard({ item }: { item: FeedItem }) {
 
         {/* ── Cause / scope badges + fundraiser link ───────── */}
         <div className="flex flex-wrap items-center gap-1.5">
+          {item.is_own && item.own_visibility && (
+            <Badge
+              variant="secondary"
+              className={
+                item.own_visibility === "only_you"
+                  ? "gap-1 bg-surface-sunken text-muted-foreground"
+                  : "gap-1 bg-brand-soft text-green-700"
+              }
+            >
+              {item.own_visibility === "only_you" ? (
+                <EyeOff className="h-3 w-3" aria-hidden="true" />
+              ) : item.own_visibility === "friends" ? (
+                <Users className="h-3 w-3" aria-hidden="true" />
+              ) : (
+                <Globe className="h-3 w-3" aria-hidden="true" />
+              )}
+              {item.own_visibility === "only_you"
+                ? "Only you"
+                : item.own_visibility === "friends"
+                  ? "Friends"
+                  : "Everyone"}
+            </Badge>
+          )}
           {causeLabel && (
             <Badge
               variant="outline"
