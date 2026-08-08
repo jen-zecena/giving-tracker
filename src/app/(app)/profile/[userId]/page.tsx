@@ -64,7 +64,7 @@ export default async function PublicProfilePage({
         <ProfileCover>
           <CoverBackLink />
         </ProfileCover>
-        <div className="px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-[1180px] px-4 sm:px-6 lg:px-8">
           <ProfileIdentity
             /* Initials only — the avatar image isn't shown for profiles
                that are hidden to this viewer (matches today's behavior). */
@@ -102,7 +102,7 @@ export default async function PublicProfilePage({
         <CoverBackLink />
       </ProfileCover>
 
-      <div className="px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-[1180px] px-4 sm:px-6 lg:px-8">
         <ProfileIdentity
           avatarUrl={header.avatar_url}
           initial={firstInitial(header.display_name)}

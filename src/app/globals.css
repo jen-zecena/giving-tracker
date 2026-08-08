@@ -108,12 +108,12 @@
   --radius-xl: calc(var(--radius) + 4px);
   --radius-2xl: calc(var(--radius) + 10px);
 
-  /* Warm ink-tinted shadows (never black) — rethemes Tailwind shadow-* */
+  /* Ink-tinted shadows (never black) — rethemes Tailwind shadow-* */
   --shadow-2xs: var(--shadow-hairline);
-  --shadow-xs: 0 1px 2px rgba(47, 40, 28, 0.06);
-  --shadow-sm: 0 1px 3px rgba(47, 40, 28, 0.08), 0 1px 2px -1px rgba(47, 40, 28, 0.06);
-  --shadow-md: 0 4px 12px -2px rgba(47, 40, 28, 0.1);
-  --shadow-lg: 0 12px 32px -8px rgba(47, 40, 28, 0.14);
+  --shadow-xs: 0 1px 2px rgba(26, 27, 25, 0.06);
+  --shadow-sm: 0 1px 3px rgba(26, 27, 25, 0.08), 0 1px 2px -1px rgba(26, 27, 25, 0.06);
+  --shadow-md: 0 4px 12px -2px rgba(26, 27, 25, 0.1);
+  --shadow-lg: 0 12px 32px -8px rgba(26, 27, 25, 0.14);
 }
 
 /*
@@ -128,15 +128,19 @@
   --font-weight-normal: 400;
   --font-weight-medium: 500;
 
-  /* ── Raw DS palette (subset used by semantic aliases below) ── */
-  --sand-50: #fbf8f3;
-  --sand-100: #f5f0e8;
-  --sand-200: #e9e2d6;
-  --sand-300: #d8cebe;
-  --stone-400: #a79e8f;
-  --stone-500: #7c7367;
-  --ink-800: #33302a;
-  --ink-900: #1f1d19;
+  /* ── Raw neutral palette ──
+     Ivory & Forest neutrals (user palette, 2026-08-05) — replaces the DS
+     export's warmer sand/stone/ink values. Variable names are kept so
+     every existing reference follows automatically. */
+  --sand-50: #fcfcfa;  /* page background (the ivory) */
+  --sand-100: #f4f4ef; /* sunken surface */
+  --sand-200: #e8e8e0; /* subtle border */
+  --sand-300: #d6d6cb; /* strong border */
+  --stone-400: #a1a199; /* faint text */
+  --stone-500: #767670; /* muted text */
+  --stone-600: #545450; /* secondary text */
+  --ink-800: #2d2e2b;  /* body text */
+  --ink-900: #1a1b19;  /* strong text */
   --green-50: #eaf2ec;
   --green-100: #d3e5d8;
   --green-300: #8fbfa0;
@@ -238,7 +242,7 @@
   --radius: 0.75rem;
 
   /* ── Elevation extras ── */
-  --shadow-hairline: inset 0 0 0 1px rgba(31, 29, 25, 0.08);
+  --shadow-hairline: inset 0 0 0 1px rgba(26, 27, 25, 0.08);
   --focus-ring: color-mix(in oklch, var(--green-500) 40%, transparent);
 
   /* ── Motion ── */

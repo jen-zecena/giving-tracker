@@ -13,7 +13,7 @@ export default async function NewDonationPage() {
         subtitle="Tracking only — we never move your money"
         showAddButton={false}
       />
-      <div className="px-4 sm:px-6 lg:px-8 pb-12">
+      <div className="mx-auto w-full max-w-[1180px] px-4 sm:px-6 lg:px-8 pb-12">
         <DonationForm initialOrgs={initialOrgs} />
       </div>
     </>

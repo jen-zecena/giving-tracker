@@ -34,11 +34,6 @@ import {
 } from "@/components/ui/select";
 
 import { createDonation, updateDonation } from "@/lib/actions/donations";
-import {
-  celebrateFirstDonation,
-  celebrateMilestone,
-  donationCelebrationKind,
-} from "@/lib/celebrations";
 import { cn } from "@/lib/utils";
 import type {
   CauseTag,
@@ -285,10 +280,6 @@ export function DonationForm({ initialOrgs, donation }: DonationFormProps) {
       }
 
       const totalCount = result.data?.total_count ?? 1;
-      const celebrationKind = donationCelebrationKind(totalCount);
-      if (celebrationKind === "first") celebrateFirstDonation();
-      else if (celebrationKind === "milestone") celebrateMilestone();
-
       showCelebrationToast({
         numAmount,
         totalCount,

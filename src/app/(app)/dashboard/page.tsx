@@ -7,10 +7,8 @@ import { ProgressRing } from "@/components/progress-ring";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { WelcomeChecklist } from "@/components/welcome-checklist";
 
 import { getDashboardData } from "@/lib/queries/dashboard";
-import { getChecklistStatus } from "@/lib/queries/welcome-checklist";
 import { createClient } from "@/lib/supabase/server";
 import type {
   CauseBreakdown,
@@ -56,9 +54,8 @@ function greetingFor(hour: number): string {
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const [data, checklistStatus, { data: auth }] = await Promise.all([
+  const [data, { data: auth }] = await Promise.all([
     getDashboardData(),
-    getChecklistStatus(),
     supabase.auth.getUser(),
   ]);
 
@@ -78,9 +75,7 @@ export default async function DashboardPage() {
     <div>
       <HeroBand summary={data.summary} firstName={firstName} />
 
-      <div className="px-4 sm:px-6 lg:px-8 pb-12 space-y-6">
-        <WelcomeChecklist status={checklistStatus} />
-
+      <div className="mx-auto w-full max-w-[1180px] px-4 sm:px-6 lg:px-8 pb-12 space-y-6">
         {isEmpty ? (
           <EmptyState />
         ) : (
@@ -145,12 +140,15 @@ function HeroBand({
 
   return (
     <div
+      // Full-bleed band: the wash reaches both edges; only the content
+      // inside is capped at the DS's 1180 column.
       className="px-4 sm:px-6 lg:px-8 pt-6 lg:pt-8 pb-6"
       style={{
         background:
           "linear-gradient(180deg, var(--green-50), var(--sand-50) 88%)",
       }}
     >
+      <div className="mx-auto w-full max-w-[1180px]">
       <div className="flex flex-wrap items-start justify-between gap-6 mb-6">
         <div>
           <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-text-faint">
@@ -177,6 +175,7 @@ function HeroBand({
       <div className="grid grid-cols-1 lg:grid-cols-[1.35fr_1fr] gap-6 items-stretch">
         <TotalCard summary={summary} />
         <GoalRingCard summary={summary} />
+      </div>
       </div>
     </div>
   );
@@ -245,11 +244,9 @@ function GoalRingCard({ summary }: { summary: DashboardSummary }) {
                 ? "The ring is closed — every gift from here is a bonus."
                 : "Keep logging gifts to close the ring this year."}
             </p>
-            <Button
-              variant="secondary"
-              size="sm"
-              render={<Link href="/badges" />}
-            >
+            {/* Outline reads as a button on the brand-soft card (secondary
+                blended into the background — preview feedback). */}
+            <Button variant="outline" size="sm" render={<Link href="/badges" />}>
               See milestones
             </Button>
           </>
@@ -262,11 +259,9 @@ function GoalRingCard({ summary }: { summary: DashboardSummary }) {
               Add your income to see the share you give. It&apos;s encrypted
               before it&apos;s saved and never shown to anyone.
             </p>
-            <Button
-              variant="secondary"
-              size="sm"
-              render={<Link href="/goals" />}
-            >
+            {/* Solid primary so it unmistakably reads as a button; routes
+                straight to the Goals & income pane (preview feedback). */}
+            <Button render={<Link href="/settings?tab=goals" />}>
               Set up your goal
             </Button>
           </>

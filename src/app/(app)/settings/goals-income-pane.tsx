@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { Check, Pencil, Plus, Target, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -52,7 +52,6 @@ import {
   updateGoal,
 } from "@/lib/actions/goals";
 import { updateSettings } from "@/lib/actions/profile";
-import { celebrateGoal, newlyCompletedGoalIds } from "@/lib/celebrations";
 import {
   formatGoalValue,
   isGoalComplete,
@@ -187,14 +186,6 @@ function GoalsCard() {
   const [deleteTarget, setDeleteTarget] = useState<Goal | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Tracks the goals snapshot from the previous fetch so we can fire
-  // celebrateGoal() exactly once per not-complete → complete transition.
-  // Ref rather than state because we don't want refs to re-render on write.
-  const previousGoalsRef = useRef<Goal[]>([]);
-  // Skip the celebration diff on the very first load — otherwise every
-  // already-completed goal would fire confetti on pane mount.
-  const hasLoadedOnceRef = useRef(false);
-
   const fetchGoals = useCallback(async () => {
     setLoading(true);
     try {
@@ -203,19 +194,7 @@ function GoalsCard() {
         toast.error(result.error);
         return;
       }
-      const nextGoals = result.data ?? [];
-      if (hasLoadedOnceRef.current) {
-        const newlyComplete = newlyCompletedGoalIds(
-          previousGoalsRef.current,
-          nextGoals
-        );
-        if (newlyComplete.length > 0) {
-          celebrateGoal();
-        }
-      }
-      previousGoalsRef.current = nextGoals;
-      hasLoadedOnceRef.current = true;
-      setGoals(nextGoals);
+      setGoals(result.data ?? []);
     } finally {
       setLoading(false);
     }

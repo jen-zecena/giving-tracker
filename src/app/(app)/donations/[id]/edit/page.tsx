@@ -25,7 +25,7 @@ export default async function EditDonationPage({
     return (
       <>
         <PageHeader title="Edit donation" showAddButton={false} />
-        <div className="px-4 sm:px-6 lg:px-8 pb-12">
+        <div className="mx-auto w-full max-w-[1180px] px-4 sm:px-6 lg:px-8 pb-12">
           <div className="rounded-xl border border-dashed border-border-strong px-6 py-12 text-center">
             <span
               className="mx-auto flex size-11 items-center justify-center rounded-full bg-brand-soft text-green-700"
@@ -59,7 +59,7 @@ export default async function EditDonationPage({
         subtitle="Tracking only — we never move your money"
         showAddButton={false}
       />
-      <div className="px-4 sm:px-6 lg:px-8 pb-12">
+      <div className="mx-auto w-full max-w-[1180px] px-4 sm:px-6 lg:px-8 pb-12">
         <DonationForm
           initialOrgs={orgsResult.data ?? []}
           donation={donationResult.data}

@@ -7,7 +7,6 @@ import { Progress } from "@/components/ui/progress";
 import { createClient } from "@/lib/supabase/server";
 import { getBadges, type Badge } from "@/lib/queries/badges";
 
-import { BadgeCelebration } from "./badge-celebration";
 import { BadgesBoard } from "./badges-board";
 import { formatProgress, isInProgress } from "./badges-utils";
 
@@ -41,7 +40,6 @@ export default async function BadgesPage() {
 
   return (
     <>
-      <BadgeCelebration earnedBadgeIds={earnedBadges.map((b) => b.id)} />
       <PageHeader
         title="Milestones"
         subtitle={`${counts.earned} of ${badges.length} earned`}

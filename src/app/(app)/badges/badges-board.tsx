@@ -1,7 +1,25 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Award, Lock } from "lucide-react";
+import {
+  Award,
+  BookOpen,
+  CalendarDays,
+  Crown,
+  Earth,
+  Flame,
+  Globe,
+  HeartPulse,
+  Lock,
+  MapPin,
+  Palette,
+  Repeat,
+  Sparkles,
+  Sprout,
+  Star,
+  Target,
+  Trophy,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -27,6 +45,37 @@ import {
 
 // Re-exported for tests (tests/badges-board.test.ts) and prior callers.
 export { filterBadges, isInProgress };
+
+/**
+ * DS iconography: Lucide only — no emoji in UI chrome (preview feedback
+ * 2026-08-05). Mapped per badge id; category icon as fallback.
+ */
+const BADGE_ICONS: Record<string, typeof Award> = {
+  "first-donation": Sprout,
+  "1-percent-club": Award,
+  "2-percent-club": Award,
+  "5-percent-club": Trophy,
+  "10-donations": Sparkles,
+  "50-donations": Star,
+  "100-donations": Crown,
+  "monthly-giver": CalendarDays,
+  "consistency-king": Flame,
+  "year-round-giver": Trophy,
+  "education-champion": BookOpen,
+  "health-advocate": HeartPulse,
+  "environment-hero": Sprout,
+  "diverse-giver": Palette,
+  "local-hero": MapPin,
+  "global-citizen": Earth,
+  "recurring-supporter": Repeat,
+};
+
+const CATEGORY_FALLBACK_ICONS: Record<string, typeof Award> = {
+  milestone: Award,
+  consistency: Flame,
+  cause: Globe,
+  impact: Target,
+};
 
 const CATEGORY_OPTIONS: { value: CategoryFilter; label: string }[] = [
   { value: "all", label: "All" },
@@ -163,6 +212,10 @@ function BadgeGrid({ badges, tab }: { badges: BadgeData[]; tab: TabValue }) {
 function BadgeCard({ badge }: { badge: BadgeData }) {
   const inProgress = isInProgress(badge);
   const locked = !badge.earned && !inProgress;
+  // Direct map lookup (existing component references, nothing created
+  // during render).
+  const BadgeIcon =
+    BADGE_ICONS[badge.id] ?? CATEGORY_FALLBACK_ICONS[badge.category] ?? Award;
   const progressPct =
     badge.target && badge.target > 0
       ? Math.min(100, Math.round(((badge.progress ?? 0) / badge.target) * 100))
@@ -180,16 +233,16 @@ function BadgeCard({ badge }: { badge: BadgeData }) {
       <div className="flex items-start justify-between gap-3">
         <span
           className={cn(
-            "flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-2xl",
+            "flex h-12 w-12 shrink-0 items-center justify-center rounded-lg",
             badge.earned
-              ? "bg-brand-soft-hover"
+              ? "bg-brand-soft-hover text-green-700"
               : inProgress
-                ? "bg-info-soft"
-                : "bg-border"
+                ? "bg-info-soft text-info"
+                : "bg-border text-muted-foreground"
           )}
           aria-hidden="true"
         >
-          <span className={locked ? "grayscale" : undefined}>{badge.icon}</span>
+          <BadgeIcon className="h-[22px] w-[22px]" />
         </span>
         {badge.earned ? (
           <Badge variant="secondary">Earned</Badge>

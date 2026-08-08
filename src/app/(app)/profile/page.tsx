@@ -47,7 +47,7 @@ export default async function ProfilePage() {
     <>
       <ProfileCover />
 
-      <div className="px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-[1180px] px-4 sm:px-6 lg:px-8">
         <ProfileIdentity
           avatarUrl={profile.avatar_url}
           initial={firstInitial(profile.display_name, user_email)}

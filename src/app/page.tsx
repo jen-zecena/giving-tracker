@@ -23,7 +23,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -33,8 +32,10 @@ import { cn } from "@/lib/utils";
  *  - "Voices" testimonials omitted — the DS marks them as placeholder copy
  *    and no real testimonials exist.
  *  - "Watch the 60-second tour" omitted — no tour exists.
- *  - Premium pricing shows "Coming soon" — no price exists in the repo.
- *  - Footer keeps only links that resolve to real destinations.
+ *  - Footer Company/Legal entries are inert text (pages don't exist yet;
+ *    restored per preview feedback, but not rendered as dead links).
+ * Premium shows the DS's $6/mo card per preview feedback (2026-08-05),
+ * although billing isn't built — "Go premium" routes to /register.
  */
 
 const eyebrow =
@@ -64,18 +65,18 @@ export default function Home() {
 function Hero() {
   return (
     <section
-      className="relative -mt-[72px] overflow-hidden pt-32 lg:pt-40"
+      className="relative overflow-hidden pt-14"
       style={{
+        // DS hero geometry: the nav sits above this section in normal flow,
+        // so the green band starts below the header, and the wash fades to
+        // sand at 62% — the DS's own stop (screenshot feedback 2026-08-05:
+        // green started mid-header and read too strong).
         background:
-          "linear-gradient(180deg, var(--green-50) 0%, var(--sand-50) 62%)",
+          "linear-gradient(180deg, color-mix(in srgb, var(--green-50) 55%, var(--sand-50)) 0%, var(--sand-50) 62%)",
       }}
     >
       <div className="relative z-10 mx-auto max-w-[1180px] px-5 lg:px-10 text-center">
-        <span className="inline-flex items-center gap-2 rounded-full bg-card py-1.5 pl-2 pr-3.5 text-xs text-muted-foreground shadow-2xs">
-          <Badge className="bg-brand text-white">New</Badge>
-          Recurring gifts now wait for your confirmation
-        </span>
-        <h1 className="mx-auto mt-6 font-display text-6xl sm:text-7xl lg:text-[92px] leading-[0.98] tracking-tight text-green-900">
+        <h1 className="mx-auto font-display font-bold text-6xl sm:text-7xl lg:text-[92px] leading-[0.98] tracking-tight text-green-900">
           Give a little,
           <br />
           every year.
@@ -106,7 +107,7 @@ function Hero() {
           className="rounded-t-[22px] bg-card p-6 pb-10"
           style={{
             boxShadow:
-              "var(--shadow-hairline), 0 -1px 60px -20px rgba(47,40,28,0.28)",
+              "var(--shadow-hairline), 0 -1px 60px -20px rgba(26,27,25,0.28)",
           }}
         >
           <div className="mb-5 flex items-center gap-2">
@@ -227,7 +228,7 @@ function Bento() {
         <div className="mb-7 flex flex-wrap items-end justify-between gap-6">
           <div>
             <span className={eyebrow}>The whole idea</span>
-            <h2 className="mt-2.5 max-w-[520px] text-3xl lg:text-[44px] leading-[1.08] font-semibold tracking-tight">
+            <h2 className="mt-2.5 max-w-[520px] text-3xl lg:text-[44px] leading-[1.08] font-bold tracking-tight">
               One percent, made impossible to forget.
             </h2>
           </div>
@@ -407,7 +408,7 @@ function PrivacyBand() {
             <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-white/45">
               Privacy first
             </span>
-            <h2 className="mt-3 font-display text-4xl lg:text-[52px] leading-[1.05] text-white">
+            <h2 className="mt-3 font-display font-bold text-4xl lg:text-[52px] leading-[1.05] text-white">
               Your income is
               <br />
               nobody&apos;s business.
@@ -419,6 +420,12 @@ function PrivacyBand() {
             streaks and counts, never dollars.
           </p>
         </div>
+        {/* Preview feedback: make it explicit that the tiles below are the
+            privacy options the member picks from. */}
+        <p className="mb-4 text-[15px] font-semibold text-white/85">
+          You choose one of three privacy levels — and can change it whenever
+          you like:
+        </p>
         <div className="grid gap-4 sm:grid-cols-3">
           {TIERS.map(({ Icon, name, desc }) => (
             <div
@@ -448,7 +455,7 @@ function PricingFaq() {
       <div className="mx-auto grid max-w-[1180px] items-start gap-10 px-5 lg:grid-cols-2 lg:gap-14 lg:px-10">
         <div>
           <span className={eyebrow}>Pricing</span>
-          <h2 className="mt-2.5 mb-6 text-3xl lg:text-[40px] leading-[1.1] font-semibold tracking-tight">
+          <h2 className="mt-2.5 mb-6 text-3xl lg:text-[40px] leading-[1.1] font-bold tracking-tight">
             Free where it counts.
           </h2>
           <div className="grid gap-3.5">
@@ -466,25 +473,28 @@ function PricingFaq() {
                 Start your log
               </Button>
             </div>
+            {/* Preview feedback: show the full DS Premium card (price and
+                CTA) even though billing isn't built yet. */}
             <div className="grid gap-3 rounded-xl bg-brand-soft p-6">
               <div className="flex items-baseline justify-between">
                 <span className="text-[19px] font-semibold text-green-900">
                   Premium
                 </span>
-                <span className="rounded-full bg-card px-2.5 py-0.5 text-xs font-medium text-green-700">
-                  Coming soon
+                <span className="font-mono text-xl text-green-900">
+                  $6<span className="text-[13px]">/mo</span>
                 </span>
               </div>
               <p className="m-0 text-sm text-green-900/75">
                 Multi-year trends, CSV and tax summaries, receipt storage, and
-                custom goals are on the way.
+                custom goals.
               </p>
+              <Button render={<Link href="/register" />}>Go premium</Button>
             </div>
           </div>
         </div>
         <div>
           <span className={eyebrow}>Questions</span>
-          <h2 className="mt-2.5 mb-6 text-3xl lg:text-[40px] leading-[1.1] font-semibold tracking-tight">
+          <h2 className="mt-2.5 mb-6 text-3xl lg:text-[40px] leading-[1.1] font-bold tracking-tight">
             The short answers.
           </h2>
           <Accordion>
@@ -531,7 +541,7 @@ function Closing() {
     <section className="pb-16 lg:pb-24">
       <div className="mx-auto max-w-[1180px] px-5 lg:px-10">
         <div className="rounded-2xl bg-brand px-8 py-14 lg:py-[72px] text-center">
-          <h2 className="m-0 font-display text-4xl lg:text-[56px] leading-[1.05] text-white">
+          <h2 className="m-0 font-display font-bold text-4xl lg:text-[56px] leading-[1.05] text-white">
             Start the log today.
           </h2>
           <p className="mx-auto mt-4 mb-8 max-w-[440px] text-[17px] text-white/80">
@@ -553,7 +563,7 @@ function Closing() {
 function SiteFooter() {
   return (
     <footer className="border-t border-border py-12">
-      <div className="mx-auto grid max-w-[1180px] gap-8 px-5 sm:grid-cols-[1.4fr_1fr] lg:px-10">
+      <div className="mx-auto grid max-w-[1180px] gap-8 px-5 sm:grid-cols-2 lg:grid-cols-[1.4fr_repeat(3,1fr)] lg:px-10">
         <div>
           <Logo />
           <p className="mt-3.5 max-w-[260px] text-sm text-muted-foreground">
@@ -581,6 +591,30 @@ function SiteFooter() {
             ))}
           </div>
         </div>
+        {/* Per preview feedback: the DS's Company/Legal sections return even
+            though these pages don't exist yet — rendered as inert text so
+            nothing navigates nowhere. */}
+        {(
+          [
+            ["Company", ["About", "Blog", "Contact"]],
+            ["Legal", ["Privacy", "Terms", "Security"]],
+          ] as const
+        ).map(([heading, items]) => (
+          <div key={heading}>
+            <div className={eyebrow}>{heading}</div>
+            <div className="mt-3 grid justify-items-start gap-2">
+              {items.map((label) => (
+                <span
+                  key={label}
+                  className="text-sm text-muted-foreground"
+                  title="Coming soon"
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
       <div className="mx-auto mt-10 max-w-[1180px] border-t border-border px-5 pt-5 lg:px-10">
         <span className="text-xs text-text-faint">
