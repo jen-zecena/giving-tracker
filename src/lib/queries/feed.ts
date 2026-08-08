@@ -22,9 +22,22 @@ export type FeedItem = {
   cause_tag: CauseTag | null;
   scope: DonationScope;
   notes: string | null;
+  /** Optional https link to the fundraiser this gift went to. */
+  fundraiser_url: string | null;
+  /** Rich directory info when the donation is linked (or name-matched). */
+  nonprofit: FeedNonprofit | null;
   created_at: string;
   likes_count: number;
   user_has_liked: boolean;
+};
+
+export type FeedNonprofit = {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  verified: boolean;
+  mission: string | null;
+  location: string | null;
 };
 
 export type FeedPageData = {
@@ -73,7 +86,7 @@ export async function getFeedPageData(): Promise<FeedPageData | null> {
   const { data: donationRows, error: donationErr } = await supabase
     .from("donations")
     .select(
-      "id, user_id, organization_name, amount, donation_date, scope, cause_tag, notes, hide_from_feed, created_at"
+      "id, user_id, organization_name, amount, donation_date, scope, cause_tag, notes, hide_from_feed, fundraiser_url, nonprofit_id, created_at"
     )
     .in("user_id", followingIds)
     .eq("hide_from_feed", false)
@@ -98,7 +111,27 @@ export async function getFeedPageData(): Promise<FeedPageData | null> {
   );
   const donationIds = donations.map((d) => d.id as string);
 
-  const [profileRes, likesRes, ownLikesRes] = await Promise.all([
+  // Directory enrichment inputs: linked ids, plus exact names as a
+  // fallback for donations that predate the nonprofit_id column. The
+  // name fallback is exact-match (the common case: names picked from the
+  // directory verbatim); anything fuzzier would risk painting the wrong
+  // org's logo on someone's gift.
+  const nonprofitIds = Array.from(
+    new Set(
+      donations
+        .map((d) => d.nonprofit_id as string | null)
+        .filter((id): id is string => Boolean(id))
+    )
+  );
+  const unlinkedNames = Array.from(
+    new Set(
+      donations
+        .filter((d) => !d.nonprofit_id)
+        .map((d) => d.organization_name as string)
+    )
+  );
+
+  const [profileRes, likesRes, ownLikesRes, nonprofitByIdRes, nonprofitByNameRes] = await Promise.all([
     supabase
       .from("profiles")
       .select("id, display_name, avatar_url, privacy_tier, show_amounts_to_friends")
@@ -112,6 +145,18 @@ export async function getFeedPageData(): Promise<FeedPageData | null> {
       .select("donation_id")
       .eq("user_id", user.id)
       .in("donation_id", donationIds),
+    nonprofitIds.length > 0
+      ? supabase
+          .from("nonprofits")
+          .select("id, name, logo_url, verified, mission, location")
+          .in("id", nonprofitIds)
+      : Promise.resolve({ data: [], error: null }),
+    unlinkedNames.length > 0
+      ? supabase
+          .from("nonprofits")
+          .select("id, name, logo_url, verified, mission, location")
+          .in("name", unlinkedNames)
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
   if (profileRes.error) {
@@ -144,6 +189,32 @@ export async function getFeedPageData(): Promise<FeedPageData | null> {
     (ownLikesRes.data ?? []).map((r) => r.donation_id as string)
   );
 
+  const toFeedNonprofit = (n: Record<string, unknown>): FeedNonprofit => ({
+    id: n.id as string,
+    name: n.name as string,
+    logo_url: (n.logo_url as string | null) ?? null,
+    verified: Boolean(n.verified),
+    mission: (n.mission as string | null) ?? null,
+    location: (n.location as string | null) ?? null,
+  });
+  const nonprofitById = new Map<string, FeedNonprofit>();
+  for (const n of nonprofitByIdRes.data ?? []) {
+    const np = toFeedNonprofit(n);
+    nonprofitById.set(np.id, np);
+  }
+  // Name map keyed lowercase; only unambiguous names may match.
+  const nameCounts = new Map<string, number>();
+  for (const n of nonprofitByNameRes.data ?? []) {
+    const key = (n.name as string).toLowerCase();
+    nameCounts.set(key, (nameCounts.get(key) ?? 0) + 1);
+  }
+  const nonprofitByName = new Map<string, FeedNonprofit>();
+  for (const n of nonprofitByNameRes.data ?? []) {
+    const np = toFeedNonprofit(n);
+    const key = np.name.toLowerCase();
+    if (nameCounts.get(key) === 1) nonprofitByName.set(key, np);
+  }
+
   const items: FeedItem[] = donations.map((d) => {
     const userId = d.user_id as string;
     const poster = profileById.get(userId) ?? {
@@ -171,6 +242,13 @@ export async function getFeedPageData(): Promise<FeedPageData | null> {
       cause_tag: (d.cause_tag as CauseTag | null) ?? null,
       scope: d.scope as DonationScope,
       notes: (d.notes as string | null) ?? null,
+      fundraiser_url: (d.fundraiser_url as string | null) ?? null,
+      nonprofit:
+        (d.nonprofit_id
+          ? nonprofitById.get(d.nonprofit_id as string)
+          : nonprofitByName.get(
+              (d.organization_name as string).toLowerCase()
+            )) ?? null,
       created_at: d.created_at as string,
       likes_count: likeCountById.get(d.id as string) ?? 0,
       user_has_liked: ownLikeSet.has(d.id as string),

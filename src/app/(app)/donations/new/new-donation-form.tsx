@@ -142,6 +142,9 @@ export function DonationForm({ initialOrgs, donation }: DonationFormProps) {
     donation?.cause_tag ?? "",
   );
   const [customTag, setCustomTag] = useState(donation?.custom_tag ?? "");
+  const [fundraiserUrl, setFundraiserUrl] = useState(
+    donation?.fundraiser_url ?? ""
+  );
   const [notes, setNotes] = useState(donation?.notes ?? "");
   const [taxDeductible, setTaxDeductible] = useState(
     donation?.is_tax_deductible ?? true,
@@ -239,6 +242,7 @@ export function DonationForm({ initialOrgs, donation }: DonationFormProps) {
           cause_tag: causeTag || null,
           custom_tag: customTag,
           notes,
+          fundraiser_url: fundraiserUrl,
           is_tax_deductible: taxDeductible,
           hide_from_feed: hideFromFeed,
         });
@@ -264,6 +268,7 @@ export function DonationForm({ initialOrgs, donation }: DonationFormProps) {
         cause_tag: causeTag || null,
         custom_tag: customTag.trim() || undefined,
         notes: notes.trim() || undefined,
+        fundraiser_url: fundraiserUrl.trim() || undefined,
         is_tax_deductible: taxDeductible,
         is_private_override: false,
         hide_from_feed: hideFromFeed,
@@ -465,6 +470,24 @@ export function DonationForm({ initialOrgs, donation }: DonationFormProps) {
                     value={customTag}
                     onChange={(e) => setCustomTag(e.target.value)}
                   />
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="fundraiserUrl">Fundraiser link</Label>
+                    <span className="text-xs text-text-faint">Optional</span>
+                  </div>
+                  <Input
+                    id="fundraiserUrl"
+                    type="url"
+                    inputMode="url"
+                    placeholder="https://www.gofundme.com/f/…"
+                    value={fundraiserUrl}
+                    onChange={(e) => setFundraiserUrl(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Link the GoFundMe or fundraiser page this gift went to.
+                  </p>
                 </div>
 
                 {!isEdit && (
