@@ -23,6 +23,7 @@ import { getFollowButtonState } from "@/lib/actions/discover-helpers";
 import { resolveEmptyStateKind } from "@/lib/actions/feed-helpers";
 import { getDiscoverPageData } from "@/lib/queries/discover";
 import { getFeedPageData, type FeedItem } from "@/lib/queries/feed";
+import { LoadErrorState } from "@/components/load-error-state";
 import { createClient } from "@/lib/supabase/server";
 
 import { LikeButton } from "./like-button";
@@ -100,9 +101,11 @@ export default async function FeedPage() {
 
   // Rail: people the viewer doesn't follow yet (reuses the Discover
   // query — no new backend). Pending requests are excluded too.
-  const followingSet = new Set(discoverData?.followingIds ?? []);
-  const outgoingSet = new Set(discoverData?.pendingOutgoingIds ?? []);
-  const suggestions: SuggestedPerson[] = (discoverData?.users ?? [])
+  // The rail is best-effort: a failed discover query just hides it.
+  const discover = discoverData === "error" ? null : discoverData;
+  const followingSet = new Set(discover?.followingIds ?? []);
+  const outgoingSet = new Set(discover?.pendingOutgoingIds ?? []);
+  const suggestions: SuggestedPerson[] = (discover?.users ?? [])
     .filter((u) => !followingSet.has(u.id) && !outgoingSet.has(u.id))
     .slice(0, 3)
     .map((u) => ({
@@ -155,7 +158,13 @@ export default async function FeedPage() {
               avatarUrl={viewer.avatarUrl}
             />
 
-            {items.length === 0 ? (
+            {data.loadError ? (
+              <LoadErrorState
+                title="Your feed couldn't load"
+                description="Something hiccuped on our side — your data is safe."
+                retryHref="/feed"
+              />
+            ) : items.length === 0 ? (
               emptyKind === "no-follows" ? (
                 <FeedEmptyState
                   icon={<Compass className="h-6 w-6" aria-hidden />}

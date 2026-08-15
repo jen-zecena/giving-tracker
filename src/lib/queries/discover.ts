@@ -39,7 +39,14 @@ export type DiscoverPageData = {
  * Returns `null` when the caller is unauthenticated so the page can
  * redirect to login without threading an error through.
  */
-export async function getDiscoverPageData(): Promise<DiscoverPageData | null> {
+/**
+ * Returns `null` for unauthenticated callers (page redirects) and the
+ * string sentinel `"error"` when the query fails (pages render an inline
+ * retry state instead of crashing to the error boundary).
+ */
+export async function getDiscoverPageData(): Promise<
+  DiscoverPageData | null | "error"
+> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -68,7 +75,8 @@ export async function getDiscoverPageData(): Promise<DiscoverPageData | null> {
   ]);
 
   if (usersRes.error) {
-    throw new Error(`Failed to load discover users: ${usersRes.error.message}`);
+    console.error("[discover] users query failed", usersRes.error.message);
+    return "error";
   }
 
   const users: DiscoverUser[] = (usersRes.data ?? []).map((row) => ({
