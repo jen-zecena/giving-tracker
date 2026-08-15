@@ -72,9 +72,12 @@ const TYPE_LABELS: Record<GoalType, string> = {
   causes: "Different causes",
 };
 
+// "Every month/year": timeframe goals re-evaluate against the current
+// calendar window, so they recur — the old "This month" label made a
+// monthly goal sound like a one-off.
 const TIMEFRAME_LABELS: Record<GoalTimeframe, string> = {
-  month: "This month",
-  year: "This year",
+  month: "Every month",
+  year: "Every year",
   ongoing: "Ongoing",
 };
 
