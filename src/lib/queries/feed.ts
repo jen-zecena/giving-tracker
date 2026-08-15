@@ -51,6 +51,8 @@ export type FeedNonprofit = {
 export type FeedPageData = {
   items: FeedItem[];
   followsCount: number;
+  /** True when a query failed — page shows an inline retry state. */
+  loadError: boolean;
 };
 
 /**
@@ -76,7 +78,8 @@ export async function getFeedPageData(): Promise<FeedPageData | null> {
     .select("following_id")
     .eq("follower_id", user.id);
   if (followErr) {
-    throw new Error(`Failed to load follows: ${followErr.message}`);
+    console.error("[feed] follows query failed", followErr.message);
+    return { items: [], followsCount: 0, loadError: true };
   }
 
   const followingIds = (followRows ?? []).map(
@@ -112,13 +115,12 @@ export async function getFeedPageData(): Promise<FeedPageData | null> {
       .order("created_at", { ascending: false })
       .limit(FEED_PAGE_SIZE),
   ]);
-  if (followedRes.error) {
-    throw new Error(
-      `Failed to load feed donations: ${followedRes.error.message}`
+  if (followedRes.error || ownRes.error) {
+    console.error(
+      "[feed] donations query failed",
+      followedRes.error?.message ?? ownRes.error?.message
     );
-  }
-  if (ownRes.error) {
-    throw new Error(`Failed to load own donations: ${ownRes.error.message}`);
+    return { items: [], followsCount: followingIds.length, loadError: true };
   }
 
   // Merge, newest first (donation_date, then created_at), one page.
@@ -133,7 +135,7 @@ export async function getFeedPageData(): Promise<FeedPageData | null> {
     .slice(0, FEED_PAGE_SIZE);
 
   if (donations.length === 0) {
-    return { items: [], followsCount: followingIds.length };
+    return { items: [], followsCount: followingIds.length, loadError: false };
   }
 
   // ── Enrichment: posters' profiles + likes (counts + own) ──
@@ -193,7 +195,8 @@ export async function getFeedPageData(): Promise<FeedPageData | null> {
   ]);
 
   if (profileRes.error) {
-    throw new Error(`Failed to load feed profiles: ${profileRes.error.message}`);
+    console.error("[feed] profiles query failed", profileRes.error.message);
+    return { items: [], followsCount: followingIds.length, loadError: true };
   }
 
   type PosterProfile = {
@@ -299,5 +302,5 @@ export async function getFeedPageData(): Promise<FeedPageData | null> {
     };
   });
 
-  return { items, followsCount: followingIds.length };
+  return { items, followsCount: followingIds.length, loadError: false };
 }

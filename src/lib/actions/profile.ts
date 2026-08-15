@@ -74,7 +74,19 @@ export async function updateSettings(
       updates.salary_encrypted = null;
       updates.salary_updated_at = null;
     } else {
-      updates.salary_encrypted = encryptSalaryForDB(data.salary);
+      // encryptSalaryForDB throws when SALARY_ENCRYPTION_KEY is missing or
+      // malformed. A server action must never throw for that — it takes
+      // the whole page down with the platform error screen. Return a
+      // toast-able error instead.
+      try {
+        updates.salary_encrypted = encryptSalaryForDB(data.salary);
+      } catch (err) {
+        console.error("[settings] salary encryption failed", err);
+        return {
+          error:
+            "Income can't be saved right now — the server is missing its encryption setup. Everything else still works.",
+        };
+      }
       updates.salary_updated_at = new Date().toISOString();
     }
   }

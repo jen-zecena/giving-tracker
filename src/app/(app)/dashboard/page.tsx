@@ -75,7 +75,11 @@ export default async function DashboardPage() {
     <div>
       <HeroBand summary={data.summary} firstName={firstName} />
 
-      <div className="mx-auto w-full max-w-[1180px] px-4 sm:px-6 lg:px-8 pb-12 space-y-6">
+      {/* Same geometry as the hero band: padding on the outer element,
+          1180 cap on an inner wrapper — so these cards align exactly with
+          the hero cards above (they were 64px narrower before). */}
+      <div className="px-4 sm:px-6 lg:px-8 pb-12">
+      <div className="mx-auto w-full max-w-[1180px] space-y-6">
         {isEmpty ? (
           <EmptyState />
         ) : (
@@ -88,10 +92,6 @@ export default async function DashboardPage() {
               {/* Main column */}
               <div className="space-y-6 min-w-0">
                 <MonthlyChart data={data.monthly} />
-                <GivingGrid
-                  data={data.monthly}
-                  streakMonths={data.summary.streak_current}
-                />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <ScopeDonut data={data.scope} />
                   <CauseBreakdownCard
@@ -99,6 +99,10 @@ export default async function DashboardPage() {
                     ytdTotal={data.summary.ytd_total}
                   />
                 </div>
+                <GivingGrid
+                  data={data.monthly}
+                  streakMonths={data.summary.streak_current}
+                />
               </div>
 
               {/* Side rail */}
@@ -114,6 +118,7 @@ export default async function DashboardPage() {
             </div>
           </>
         )}
+      </div>
       </div>
     </div>
   );
@@ -316,25 +321,49 @@ function CauseBreakdownCard({
   const top6 = data.slice(0, 6);
   if (top6.length === 0) return null;
 
+  // Each cause takes a hue from the DS chart palette, cycling when there
+  // are more causes than colors.
+  const CAUSE_BAR_COLORS = [
+    "[&_[data-slot=progress-indicator]]:bg-(--chart-1)",
+    "[&_[data-slot=progress-indicator]]:bg-(--chart-2)",
+    "[&_[data-slot=progress-indicator]]:bg-(--chart-3)",
+    "[&_[data-slot=progress-indicator]]:bg-(--chart-4)",
+    "[&_[data-slot=progress-indicator]]:bg-(--chart-5)",
+  ];
+  const CAUSE_DOT_COLORS = [
+    "bg-(--chart-1)",
+    "bg-(--chart-2)",
+    "bg-(--chart-3)",
+    "bg-(--chart-4)",
+    "bg-(--chart-5)",
+  ];
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>By cause</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3.5">
-        {top6.map((cause) => {
+        {top6.map((cause, i) => {
           const pct = ytdTotal > 0 ? (cause.total / ytdTotal) * 100 : 0;
           return (
             <div key={cause.cause_tag} className="space-y-1">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-foreground">
+                <span className="flex items-center gap-2 text-foreground">
+                  <span
+                    className={`h-2.5 w-2.5 shrink-0 rounded-full ${CAUSE_DOT_COLORS[i % CAUSE_DOT_COLORS.length]}`}
+                    aria-hidden="true"
+                  />
                   {CAUSE_LABELS[cause.cause_tag] ?? cause.cause_tag}
                 </span>
                 <span className="font-mono text-xs text-muted-foreground">
                   {formatCurrency(cause.total)}
                 </span>
               </div>
-              <Progress value={pct} className="h-2" />
+              <Progress
+                value={pct}
+                className={`h-2 ${CAUSE_BAR_COLORS[i % CAUSE_BAR_COLORS.length]}`}
+              />
             </div>
           );
         })}

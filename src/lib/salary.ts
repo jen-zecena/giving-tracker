@@ -97,14 +97,24 @@ export function decryptSalaryRangeFromDB(base64Data: string): string {
 
 /**
  * Calculate the donation percentage against salary.
- * Returns null if salary is not set.
+ * Returns null if salary is not set — or if it can't be decrypted
+ * (missing SALARY_ENCRYPTION_KEY on this deployment, or ciphertext
+ * written under a different key). A read-path decrypt failure must
+ * degrade to "percentage unavailable", never crash the dashboard or
+ * milestones page.
  */
 export function calculateDonationPercentage(
   totalDonated: number,
   encryptedSalary: string | null
 ): number | null {
   if (!encryptedSalary) return null;
-  const salary = decryptSalaryFromDB(encryptedSalary);
-  if (salary <= 0) return null;
+  let salary: number;
+  try {
+    salary = decryptSalaryFromDB(encryptedSalary);
+  } catch (err) {
+    console.error("[salary] decrypt failed — percentage unavailable", err);
+    return null;
+  }
+  if (!Number.isFinite(salary) || salary <= 0) return null;
   return (totalDonated / salary) * 100;
 }
