@@ -5,8 +5,8 @@ import { Logo } from "@/components/logo";
 /**
  * DS marketing-site sign-in shell: a split screen with a deep-green brand
  * panel beside the form column. The DS panel featured a member quote, but
- * no real testimonials exist — the panel carries the product's factual
- * privacy statement instead (flagged in the PR).
+ * no real testimonials exist — the panel carries the landing page's own
+ * hero and closing lines instead.
  */
 export function AuthSplit({ children }: { children: ReactNode }) {
   return (
@@ -19,12 +19,13 @@ export function AuthSplit({ children }: { children: ReactNode }) {
           <Logo inverse />
         </Link>
         <div>
-          <p className="font-display text-[34px] leading-[1.25] text-white max-w-[420px] [text-wrap:pretty]">
-            Your income is nobody&apos;s business.
+          <p className="font-display font-bold text-[40px] leading-[1.15] text-white max-w-[420px] [text-wrap:pretty]">
+            Give a little,
+            <br />
+            every year.
           </p>
           <p className="mt-4 text-sm text-white/60 max-w-[400px]">
-            Salary is stored encrypted and never displayed — only the
-            percentage you give, and only if you opt in.
+            One gift is enough to begin. The ring takes care of the rest.
           </p>
         </div>
         <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-white/35">
