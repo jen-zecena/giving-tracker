@@ -67,6 +67,30 @@ function getNextDueDate(date: string, frequency: RecurringFrequency): string {
   return d.toISOString().split("T")[0];
 }
 
+import {
+  resolveNonprofitMatch,
+  validateFundraiserUrl,
+} from "./donation-link-helpers";
+
+/**
+ * Case-insensitive exact-name lookup into the synced nonprofits
+ * directory. Links only on an unambiguous single match; any error or
+ * ambiguity degrades to "no link" — directory matching must never block
+ * saving a donation.
+ */
+async function findNonprofitIdByName(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  organizationName: string
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("nonprofits")
+    .select("id")
+    .ilike("name", organizationName.trim())
+    .limit(2);
+  if (error || !data) return null;
+  return resolveNonprofitMatch(data as { id: string }[]);
+}
+
 async function getAuthenticatedUser() {
   const supabase = await createClient();
   const {
@@ -108,6 +132,17 @@ export async function createDonation(
   if (!data.scope) {
     return { error: "Scope is required." };
   }
+  const fundraiser = validateFundraiserUrl(data.fundraiser_url);
+  if (!fundraiser.ok) {
+    return { error: fundraiser.error };
+  }
+
+  // Link to the nonprofits directory when the name matches exactly one
+  // entry — powers rich org info on the feed and profile.
+  const nonprofitId = await findNonprofitIdByName(
+    supabase,
+    data.organization_name
+  );
 
   // Insert donation
   const { data: donation, error } = await supabase
@@ -127,6 +162,8 @@ export async function createDonation(
       status: data.is_recurring ? "pending" : "confirmed",
       is_private_override: data.is_private_override,
       hide_from_feed: data.hide_from_feed ?? false,
+      fundraiser_url: fundraiser.url,
+      nonprofit_id: nonprofitId,
     })
     .select("id")
     .single();
@@ -358,8 +395,22 @@ export async function updateDonation(
 
   const updates: Record<string, unknown> = {};
 
-  if (data.organization_name !== undefined)
+  if (data.fundraiser_url !== undefined) {
+    const fundraiser = validateFundraiserUrl(data.fundraiser_url);
+    if (!fundraiser.ok) {
+      return { error: fundraiser.error };
+    }
+    updates.fundraiser_url = fundraiser.url;
+  }
+  if (data.organization_name !== undefined) {
     updates.organization_name = data.organization_name.trim();
+    // The org changed — re-resolve the directory link so stale rich info
+    // never shows for a renamed organization.
+    updates.nonprofit_id = await findNonprofitIdByName(
+      supabase,
+      data.organization_name
+    );
+  }
   if (data.amount !== undefined) updates.amount = data.amount;
   if (data.donation_date !== undefined)
     updates.donation_date = data.donation_date;

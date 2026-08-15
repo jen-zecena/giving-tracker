@@ -1,7 +1,18 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { format } from "date-fns";
-import { Compass, Heart, Plus, UserPlus } from "lucide-react";
+import {
+  CheckCircle2,
+  Compass,
+  ExternalLink,
+  EyeOff,
+  Globe,
+  Heart,
+  MapPin,
+  Plus,
+  UserPlus,
+  Users,
+} from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -275,8 +286,78 @@ function FeedCard({ item }: { item: FeedItem }) {
           </div>
         </div>
 
-        {/* ── Cause / scope badges ─────────────────────────── */}
+        {/* ── Rich org info (when linked to the directory) ── */}
+        {item.nonprofit && (
+          <div className="flex items-start gap-3 rounded-lg bg-surface-sunken px-3.5 py-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-card shadow-2xs">
+              {item.nonprofit.logo_url ? (
+                // eslint-disable-next-line @next/next/no-img-element -- remote Every.org logos, same pattern as the directory cards
+                <img
+                  src={item.nonprofit.logo_url}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span
+                  aria-hidden="true"
+                  className="font-display text-lg text-brand"
+                >
+                  {item.nonprofit.name[0]?.toUpperCase()}
+                </span>
+              )}
+            </span>
+            <div className="min-w-0">
+              <span className="flex items-center gap-1.5">
+                <span className="truncate text-sm font-semibold text-text-strong">
+                  {item.nonprofit.name}
+                </span>
+                {item.nonprofit.verified && (
+                  <CheckCircle2
+                    className="h-3.5 w-3.5 shrink-0 text-brand"
+                    aria-label="Verified 501(c)(3)"
+                  />
+                )}
+              </span>
+              {item.nonprofit.mission && (
+                <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
+                  {item.nonprofit.mission}
+                </p>
+              )}
+              {item.nonprofit.location && (
+                <span className="mt-0.5 inline-flex items-center gap-1 text-xs text-text-faint">
+                  <MapPin className="h-3 w-3" aria-hidden="true" />
+                  {item.nonprofit.location}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Cause / scope badges + fundraiser link ───────── */}
         <div className="flex flex-wrap items-center gap-1.5">
+          {item.is_own && item.own_visibility && (
+            <Badge
+              variant="secondary"
+              className={
+                item.own_visibility === "only_you"
+                  ? "gap-1 bg-surface-sunken text-muted-foreground"
+                  : "gap-1 bg-brand-soft text-green-700"
+              }
+            >
+              {item.own_visibility === "only_you" ? (
+                <EyeOff className="h-3 w-3" aria-hidden="true" />
+              ) : item.own_visibility === "friends" ? (
+                <Users className="h-3 w-3" aria-hidden="true" />
+              ) : (
+                <Globe className="h-3 w-3" aria-hidden="true" />
+              )}
+              {item.own_visibility === "only_you"
+                ? "Only you"
+                : item.own_visibility === "friends"
+                  ? "Friends"
+                  : "Everyone"}
+            </Badge>
+          )}
           {causeLabel && (
             <Badge
               variant="outline"
@@ -291,6 +372,17 @@ function FeedCard({ item }: { item: FeedItem }) {
           >
             {scopeLabel}
           </Badge>
+          {item.fundraiser_url && (
+            <a
+              href={item.fundraiser_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-auto inline-flex items-center gap-1 rounded-sm text-xs font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <ExternalLink className="h-3 w-3" aria-hidden="true" />
+              Fundraiser
+            </a>
+          )}
         </div>
 
         {item.notes && (
