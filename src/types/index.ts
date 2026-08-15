@@ -89,6 +89,10 @@ export interface Donation {
   status: DonationStatus;
   is_private_override: boolean;
   hide_from_feed: boolean;
+  /** Optional https link to the fundraiser page (GoFundMe etc.). */
+  fundraiser_url: string | null;
+  /** Directory link set when the org name matches a synced nonprofit. */
+  nonprofit_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -215,6 +219,8 @@ export interface DonationFormData {
   is_tax_deductible: boolean;
   is_private_override: boolean;
   hide_from_feed?: boolean;
+  /** Optional fundraiser link; validated + normalized server-side. */
+  fundraiser_url?: string;
 }
 
 // ============================================================

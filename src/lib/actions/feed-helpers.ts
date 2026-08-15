@@ -37,3 +37,29 @@ export function resolveEmptyStateKind(
 ): FeedEmptyStateKind {
   return followsCount === 0 ? "no-follows" : "no-activity";
 }
+
+// ── Own-post visibility ───────────────────────────────────
+
+export type OwnVisibility = "only_you" | "friends" | "everyone";
+
+/**
+ * What OTHER people can see of one of your own feed items — powers the
+ * visibility badge on your own cards ("your feed shows what theirs
+ * would"). Mirrors the real visibility contract:
+ *
+ *   - hide_from_feed / per-gift private override / private tier
+ *     → nobody else sees it at all
+ *   - friends_only → followers you approved (amounts still gated
+ *     separately by show_amounts_to_friends)
+ *   - open_giver → anyone
+ */
+export function ownVisibility(
+  tier: PrivacyTier,
+  hideFromFeed: boolean,
+  isPrivateOverride: boolean
+): OwnVisibility {
+  if (hideFromFeed || isPrivateOverride || tier === "private") {
+    return "only_you";
+  }
+  return tier === "friends_only" ? "friends" : "everyone";
+}

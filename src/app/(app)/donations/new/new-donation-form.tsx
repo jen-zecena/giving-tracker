@@ -12,6 +12,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import Link from "next/link";
+
+import { ProgressRing } from "@/components/progress-ring";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -112,13 +115,24 @@ export function filterOrgSuggestions(
     .slice(0, 5);
 }
 
+export type GoalContext = {
+  /** Confirmed total for the current year. */
+  ytdTotal: number;
+  /** Decrypted yearly income (owner-only), or null when unset. */
+  salary: number | null;
+  /** Next % milestone to aim for (1, 2, …), or null without income. */
+  targetPct: number | null;
+};
+
 interface DonationFormProps {
   initialOrgs: string[];
   /** When set, the form edits this donation instead of creating a new one. */
   donation?: Donation;
+  /** Goal context for the "After saving" projection rail (create only). */
+  goal?: GoalContext;
 }
 
-export function DonationForm({ initialOrgs, donation }: DonationFormProps) {
+export function DonationForm({ initialOrgs, donation, goal }: DonationFormProps) {
   const router = useRouter();
   const isEdit = Boolean(donation);
   const [submitting, setSubmitting] = useState(false);
@@ -142,6 +156,9 @@ export function DonationForm({ initialOrgs, donation }: DonationFormProps) {
     donation?.cause_tag ?? "",
   );
   const [customTag, setCustomTag] = useState(donation?.custom_tag ?? "");
+  const [fundraiserUrl, setFundraiserUrl] = useState(
+    donation?.fundraiser_url ?? ""
+  );
   const [notes, setNotes] = useState(donation?.notes ?? "");
   const [taxDeductible, setTaxDeductible] = useState(
     donation?.is_tax_deductible ?? true,
@@ -239,6 +256,7 @@ export function DonationForm({ initialOrgs, donation }: DonationFormProps) {
           cause_tag: causeTag || null,
           custom_tag: customTag,
           notes,
+          fundraiser_url: fundraiserUrl,
           is_tax_deductible: taxDeductible,
           hide_from_feed: hideFromFeed,
         });
@@ -264,6 +282,7 @@ export function DonationForm({ initialOrgs, donation }: DonationFormProps) {
         cause_tag: causeTag || null,
         custom_tag: customTag.trim() || undefined,
         notes: notes.trim() || undefined,
+        fundraiser_url: fundraiserUrl.trim() || undefined,
         is_tax_deductible: taxDeductible,
         is_private_override: false,
         hide_from_feed: hideFromFeed,
@@ -467,6 +486,27 @@ export function DonationForm({ initialOrgs, donation }: DonationFormProps) {
                   />
                 </div>
 
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="fundraiserUrl">Fundraiser link</Label>
+                    <span className="text-xs text-text-faint">Optional</span>
+                  </div>
+                  {/* Deliberately type="text": native url validation rejects
+                      schemeless pastes ("www.gofundme.com/…") that our
+                      server-side normalization accepts and fixes. */}
+                  <Input
+                    id="fundraiserUrl"
+                    type="text"
+                    inputMode="url"
+                    placeholder="https://www.gofundme.com/f/…"
+                    value={fundraiserUrl}
+                    onChange={(e) => setFundraiserUrl(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Link the GoFundMe or fundraiser page this gift went to.
+                  </p>
+                </div>
+
                 {!isEdit && (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between gap-4">
@@ -562,7 +602,7 @@ export function DonationForm({ initialOrgs, donation }: DonationFormProps) {
         </form>
       </Card>
 
-      {/* ── Right rail (create only) ──────────────────── */}
+      {/* ── Right rail (create only): live goal projection ── */}
       {!isEdit && (
         <div className="grid gap-4 lg:sticky lg:top-6">
           <Card className="bg-brand-soft shadow-none ring-brand/15">
@@ -570,13 +610,67 @@ export function DonationForm({ initialOrgs, donation }: DonationFormProps) {
               <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-green-700">
                 After saving
               </span>
-              <p className="text-sm text-green-900">
-                {organization.trim() || "This gift"} adds{" "}
-                <strong className="font-mono">
-                  ${liveAmount.toLocaleString("en-US")}
-                </strong>{" "}
-                to your <span className="font-mono">{currentYear}</span> total.
-              </p>
+              {goal?.salary && goal.targetPct ? (
+                (() => {
+                  const currentPct = (goal.ytdTotal / goal.salary) * 100;
+                  const projectedPct =
+                    ((goal.ytdTotal + liveAmount) / goal.salary) * 100;
+                  return (
+                    <>
+                      <ProgressRing
+                        value={(projectedPct / goal.targetPct) * 100}
+                        caption={`${projectedPct.toFixed(2)}%`}
+                        sublabel={`of your ${goal.targetPct}% goal`}
+                        size={124}
+                        thickness={10}
+                      />
+                      <p className="text-sm text-green-900">
+                        {liveAmount > 0 ? (
+                          <>
+                            This gift moves your ring{" "}
+                            <span className="font-mono">
+                              {currentPct.toFixed(2)}% →{" "}
+                              {projectedPct.toFixed(2)}%
+                            </span>
+                            .
+                          </>
+                        ) : (
+                          <>
+                            {organization.trim() || "This gift"} adds{" "}
+                            <strong className="font-mono">
+                              ${liveAmount.toLocaleString("en-US")}
+                            </strong>{" "}
+                            to your{" "}
+                            <span className="font-mono">{currentYear}</span>{" "}
+                            total.
+                          </>
+                        )}
+                      </p>
+                    </>
+                  );
+                })()
+              ) : (
+                <>
+                  <p className="text-sm text-green-900">
+                    {organization.trim() || "This gift"} adds{" "}
+                    <strong className="font-mono">
+                      ${liveAmount.toLocaleString("en-US")}
+                    </strong>{" "}
+                    to your <span className="font-mono">{currentYear}</span>{" "}
+                    total.
+                  </p>
+                  <p className="text-xs text-green-900/75">
+                    Add your income to watch this gift move your 1% ring.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    render={<Link href="/settings?tab=goals" />}
+                  >
+                    Set up your goal
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
