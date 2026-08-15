@@ -1,9 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { encryptSalaryForDB } from "@/lib/salary";
+import { dashboardTag } from "@/lib/queries/dashboard";
 import { createClient } from "@/lib/supabase/server";
 import type { PrivacyTier, Profile } from "@/types";
 
@@ -105,6 +106,9 @@ export async function updateSettings(
   revalidatePath("/settings");
   revalidatePath("/profile");
   revalidatePath("/dashboard");
+  // Salary feeds the dashboard's percentage — bust its cache tag the same
+  // way donation mutations do, per the contract in lib/queries/dashboard.
+  updateTag(dashboardTag(user.id));
   return {};
 }
 
